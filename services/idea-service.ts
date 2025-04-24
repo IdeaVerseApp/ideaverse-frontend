@@ -2,9 +2,8 @@ import type { IdeaExplorationResult } from "@/types/idea-exploration"
 
 export async function generateIdeaExploration(researchIdea: string): Promise<IdeaExplorationResult> {
   // In a real application, this would be an API call
-  // For now, we'll simulate a delay and return mock data
-  await new Promise((resolve) => setTimeout(resolve, 1500))
-
+  // Remove artificial delay for better performance
+  
   // Mock data based on the research idea
   return {
     id: 1,

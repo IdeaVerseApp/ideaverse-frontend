@@ -1,14 +1,15 @@
-import type React from "react"
 import "./globals.css"
-import type { Metadata } from "next"
+
+import { AuthProvider } from "../context/AuthContext"
 import { Inter } from "next/font/google"
-import { IdeaProvider } from "@/context/IdeaContext"
+import type { Metadata } from "next"
+import type React from "react"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "IdeaVerse - Research Idea Platform",
-  description: "A platform for scientists and researchers to brainstorm new research ideas using AI",
+  title: "IdeaVerse",
+  description: "Your AI-powered idea generation platform",
 }
 
 export default function RootLayout({
@@ -19,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <IdeaProvider>{children}</IdeaProvider>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   )

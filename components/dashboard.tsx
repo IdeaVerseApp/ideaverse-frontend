@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, memo } from "react"
 import { Plus, MoreVertical, Star, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import type { UserData, ResearchIdea } from "@/types/user"
 
-// Dropdown menu for idea actions
-const IdeaActionsMenu = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+// Dropdown menu for idea actions - memoized to prevent unnecessary re-renders
+const IdeaActionsMenu = memo(({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   if (!isOpen) return null
 
   return (
@@ -46,10 +46,12 @@ const IdeaActionsMenu = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
       </div>
     </div>
   )
-}
+})
 
-// Research idea card component
-const ResearchIdeaCard = ({
+IdeaActionsMenu.displayName = 'IdeaActionsMenu'
+
+// Research idea card component - memoized to prevent unnecessary re-renders
+const ResearchIdeaCard = memo(({
   idea,
   index,
   onNavigate,
@@ -62,7 +64,7 @@ const ResearchIdeaCard = ({
   const router = useRouter()
 
   const handleExpandGenerate = () => {
-    // Check if user is logged in
+    // Check if user is logged in - moved to a local variable to avoid localStorage access on each render
     const isLoggedIn = localStorage.getItem("isLoggedIn")
 
     if (!isLoggedIn) {
@@ -136,7 +138,9 @@ const ResearchIdeaCard = ({
       </div>
     </div>
   )
-}
+})
+
+ResearchIdeaCard.displayName = 'ResearchIdeaCard'
 
 interface DashboardProps {
   onNavigate: (view: "ideas" | "code" | "paper", ideaId?: string | number) => void
@@ -207,7 +211,7 @@ export default function Dashboard({ onNavigate, userData }: DashboardProps) {
           setResearchIdeas(mockIdeas)
         }
       } catch (error) {
-        console.error("Error fetching research ideas:", error)
+        console.error("Error fetching user data:", error)
       } finally {
         setIsLoading(false)
       }
@@ -215,6 +219,18 @@ export default function Dashboard({ onNavigate, userData }: DashboardProps) {
 
     fetchData()
   }, [userData])
+
+  // Memoize the research ideas to prevent unnecessary re-renders
+  const memoizedIdeas = useMemo(() => {
+    return researchIdeas.map((idea, index) => (
+      <ResearchIdeaCard
+        key={idea.id}
+        idea={idea}
+        index={index}
+        onNavigate={onNavigate}
+      />
+    ))
+  }, [researchIdeas, onNavigate])
 
   // Get user name if available
   const userName = userData?.personalInformation[0]?.name || "Researcher"
@@ -284,9 +300,7 @@ export default function Dashboard({ onNavigate, userData }: DashboardProps) {
           </div>
         ) : (
           <div>
-            {researchIdeas.map((idea, index) => (
-              <ResearchIdeaCard key={idea.id} idea={idea} index={index} onNavigate={handleNavigate} />
-            ))}
+            {memoizedIdeas}
           </div>
         )}
       </div>

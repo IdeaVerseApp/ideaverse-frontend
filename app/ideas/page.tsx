@@ -1,12 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { usePathname } from "next/navigation"
-import Sidebar from "@/components/sidebar"
-import Navbar from "@/components/navbar"
+import { useEffect, useState } from "react"
+
 import Footer from "@/components/footer"
 import IdeaExplorer from "@/components/idea-explorer"
+import { IdeaProvider } from "@/context/IdeaContext"
+import Navbar from "@/components/navbar"
+import Sidebar from "@/components/sidebar"
 import type { UserData } from "@/types/user"
+import { usePathname } from "next/navigation"
 
 export default function IdeasPage() {
   const pathname = usePathname()
@@ -54,37 +56,39 @@ export default function IdeasPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar
-        userName={userName}
-        userInitial={userInitial}
-        activeView="ideas"
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-      />
-
-      {/* Main Content */}
-      <div
-        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${sidebarOpen ? "ml-64" : "ml-0"}`}
-      >
-        {/* Navbar */}
-        <Navbar
+    <IdeaProvider>
+      <div className="flex min-h-screen bg-gray-50">
+        {/* Sidebar */}
+        <Sidebar
           userName={userName}
           userInitial={userInitial}
+          activeView="ideas"
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
         />
 
-        {/* Content */}
-        <div className="flex-1">
-          <IdeaExplorer />
-        </div>
+        {/* Main Content */}
+        <div
+          className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${sidebarOpen ? "ml-64" : "ml-0"}`}
+        >
+          {/* Navbar */}
+          <Navbar
+            userName={userName}
+            userInitial={userInitial}
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+          />
 
-        {/* Footer */}
-        <Footer />
+          {/* Content */}
+          <div className="flex-1">
+            <IdeaExplorer />
+          </div>
+
+          {/* Footer */}
+          <Footer />
+        </div>
       </div>
-    </div>
+    </IdeaProvider>
   )
 }
 

@@ -1,9 +1,11 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { BookOpen, ChevronDown, Code, FileText, LayoutDashboard, Lightbulb, LogOut, Menu, Search, Settings, User } from "lucide-react"
+
 import Link from "next/link"
-import { Search, Code, FileText, ChevronDown, LogOut, User, Menu } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
 
 interface SidebarProps {
   userName: string
@@ -11,6 +13,12 @@ interface SidebarProps {
   activeView?: "dashboard" | "ideas" | "code" | "paper" | "profile"
   sidebarOpen?: boolean
   setSidebarOpen?: (open: boolean) => void
+}
+
+interface SidebarItem {
+  name: string
+  href: string
+  icon: LucideIcon
 }
 
 export default function Sidebar({
@@ -22,6 +30,8 @@ export default function Sidebar({
 }: SidebarProps) {
   const router = useRouter()
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
+  const { user, logout } = useAuth()
+  const pathname = useRouter().pathname
 
   const handleViewChange = (view: "dashboard" | "ideas" | "code" | "paper" | "profile") => {
     setIsProfileDropdownOpen(false)
@@ -55,15 +65,22 @@ export default function Sidebar({
     }
   }
 
-  // Add a logout function
-  const handleLogout = () => {
-    // Clear user data from localStorage
-    localStorage.removeItem("isLoggedIn")
-    localStorage.removeItem("userName")
-
-    // Redirect to login page
-    router.push("/login")
+  const handleLogout = async () => {
+    try {
+      await logout()
+    } catch (error) {
+      console.error("Logout failed:", error)
+    }
   }
+
+  const navigation: SidebarItem[] = [
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Ideas", href: "/ideas", icon: Lightbulb },
+    { name: "Code", href: "/code", icon: Code },
+    { name: "Papers", href: "/paper", icon: BookOpen },
+    { name: "Profile", href: "/userprofile", icon: User },
+    { name: "Settings", href: "/settings", icon: Settings },
+  ]
 
   return (
     <div
@@ -136,41 +153,25 @@ export default function Sidebar({
 
       <nav className="flex-1 overflow-y-auto p-2">
         <div className="space-y-1">
-          {/* Dashboard Button */}
-          <button
-            onClick={() => handleViewChange("dashboard")}
-            className={`flex items-center px-4 py-2 text-sm rounded-md w-full text-left ${activeView === "dashboard" ? "bg-gray-100" : "hover:bg-gray-100"}`}
-          >
-            <Search className="h-5 w-5 mr-3 text-gray-500" />
-            <span>Dashboard</span>
-          </button>
-
-          {/* Idea Explorer Button */}
-          <button
-            onClick={() => handleViewChange("ideas")}
-            className={`flex items-center px-4 py-2 text-sm rounded-md w-full text-left ${activeView === "ideas" ? "bg-gray-100" : "hover:bg-gray-100"}`}
-          >
-            <Search className="h-5 w-5 mr-3 text-gray-500" />
-            <span>Idea Explorer</span>
-          </button>
-
-          {/* Code Generation Button */}
-          <button
-            onClick={() => handleViewChange("code")}
-            className={`flex items-center px-4 py-2 text-sm rounded-md w-full text-left ${activeView === "code" ? "bg-gray-100" : "hover:bg-gray-100"}`}
-          >
-            <Code className="h-5 w-5 mr-3 text-gray-500" />
-            <span>Code Generation</span>
-          </button>
-
-          {/* Research Paper Writing Button */}
-          <button
-            onClick={() => handleViewChange("paper")}
-            className={`flex items-center px-4 py-2 text-sm rounded-md w-full text-left ${activeView === "paper" ? "bg-gray-100" : "hover:bg-gray-100"}`}
-          >
-            <FileText className="h-5 w-5 mr-3 text-gray-500" />
-            <span>Research Paper Writing</span>
-          </button>
+          {navigation.map((item) => {
+            const isActive = pathname === item.href
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center px-4 py-2 text-sm rounded-md w-full text-left ${
+                  isActive ? "bg-gray-100" : "hover:bg-gray-100"
+                }`}
+              >
+                <item.icon
+                  className={`h-5 w-5 mr-3 ${
+                    isActive ? "text-blue-700" : "text-gray-500"
+                  }`}
+                />
+                <span>{item.name}</span>
+              </Link>
+            )
+          })}
         </div>
       </nav>
 

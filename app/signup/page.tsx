@@ -1,61 +1,106 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Eye, EyeOff } from "lucide-react"
+import Link from 'next/link';
+import { signup } from '@/services/auth-service';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 
 export default function SignupPage() {
-  const router = useRouter()
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [formData, setFormData] = useState({
+    email: '',
+    username: '',
+    password: '',
+    confirm_password: '',
+    full_name: '',
+  });
+  const [formErrors, setFormErrors] = useState<{
+    email?: string;
+    username?: string;
+    password?: string;
+    confirm_password?: string;
+    general?: string;
+  }>({});
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // Clear error when user types
+    if (formErrors[name as keyof typeof formErrors]) {
+      setFormErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  const validateForm = () => {
+    const errors: typeof formErrors = {};
+    
+    // Email validation
+    if (!formData.email) {
+      errors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = 'Email is invalid';
+    }
+    
+    // Username validation
+    if (!formData.username) {
+      errors.username = 'Username is required';
+    } else if (formData.username.length < 3) {
+      errors.username = 'Username must be at least 3 characters';
+    }
+    
+    // Password validation
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters';
+    } else if (!/[A-Z]/.test(formData.password)) {
+      errors.password = 'Password must contain at least one uppercase letter';
+    } else if (!/[a-z]/.test(formData.password)) {
+      errors.password = 'Password must contain at least one lowercase letter';
+    } else if (!/[0-9]/.test(formData.password)) {
+      errors.password = 'Password must contain at least one number';
+    }
+    
+    // Confirm password
+    if (formData.password !== formData.confirm_password) {
+      errors.confirm_password = 'Passwords do not match';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // Basic validation
-    if (!name.trim()) {
-      setError("Please enter your name")
-      return
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
     }
+    
+    setLoading(true);
 
-    if (!email.trim()) {
-      setError("Please enter your email address")
-      return
+    try {
+      const { confirm_password, ...signupData } = formData;
+      await signup(signupData);
+      router.push('/login?registered=true');
+    } catch (err: any) {
+      setFormErrors({
+        general: err.message || 'Failed to create account. Please try again.'
+      });
+    } finally {
+      setLoading(false);
     }
-
-    if (!password || password.length < 8) {
-      setError("Please enter a password with at least 8 characters")
-      return
-    }
-
-    setError("")
-    setIsLoading(true)
-
-    // Simulate API call delay
-    setTimeout(() => {
-      // In a real app, this would be an actual registration API call
-      // For demo purposes, we'll just redirect to the login page
-
-      // Redirect to login
-      router.push("/login")
-
-      setIsLoading(false)
-    }, 1500)
-  }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Header with logo */}
       <header className="py-6 px-8 border-b border-gray-200 bg-white">
         <div className="flex items-center">
-          <Link href="/login" className="flex items-center">
+          <Link href="/" className="flex items-center">
             <div className="h-8 w-8 relative">
               <svg viewBox="0 0 24 24" className="h-8 w-8 text-blue-500">
                 <path
@@ -90,14 +135,6 @@ export default function SignupPage() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                <path d="M7 6H12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path
-                  d="M12 18H17"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
               </svg>
             </div>
             <span className="ml-2 font-semibold text-xl">
@@ -114,39 +151,68 @@ export default function SignupPage() {
             <div className="p-8">
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold text-gray-800">Create your account</h1>
-                <p className="text-gray-600 mt-2">Join IdeaVerse to start your research journey</p>
+                <p className="text-gray-600 mt-2">Join IdeaVerse and start creating</p>
               </div>
 
-              {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">{error}</div>
+              {formErrors.general && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
+                  {formErrors.general}
+                </div>
               )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Full name
-                  </label>
-                  <input
-                    id="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="John Doe"
-                  />
-                </div>
-
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                     Email address
                   </label>
                   <input
                     id="email"
+                    name="email"
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border ${
+                      formErrors.email ? 'border-red-300' : 'border-gray-300'
+                    } rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
                     placeholder="you@example.com"
+                  />
+                  {formErrors.email && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                    Username
+                  </label>
+                  <input
+                    id="username"
+                    name="username"
+                    type="text"
+                    value={formData.username}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border ${
+                      formErrors.username ? 'border-red-300' : 'border-gray-300'
+                    } rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                    placeholder="johndoe"
+                  />
+                  {formErrors.username && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.username}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-1">
+                    Full Name (optional)
+                  </label>
+                  <input
+                    id="full_name"
+                    name="full_name"
+                    type="text"
+                    value={formData.full_name}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="John Doe"
                   />
                 </div>
 
@@ -154,50 +220,48 @@ export default function SignupPage() {
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                     Password
                   </label>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="••••••••"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                  <p className="mt-1 text-xs text-gray-500">Password must be at least 8 characters long</p>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border ${
+                      formErrors.password ? 'border-red-300' : 'border-gray-300'
+                    } rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                    placeholder="••••••••"
+                  />
+                  {formErrors.password && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.password}</p>
+                  )}
                 </div>
 
-                <div className="flex items-center">
-                  <input
-                    id="terms"
-                    type="checkbox"
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
-                    I agree to the{" "}
-                    <Link href="#" className="text-blue-600 hover:text-blue-500">
-                      Terms of Service
-                    </Link>{" "}
-                    and{" "}
-                    <Link href="#" className="text-blue-600 hover:text-blue-500">
-                      Privacy Policy
-                    </Link>
+                <div>
+                  <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700 mb-1">
+                    Confirm Password
                   </label>
+                  <input
+                    id="confirm_password"
+                    name="confirm_password"
+                    type="password"
+                    value={formData.confirm_password}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border ${
+                      formErrors.confirm_password ? 'border-red-300' : 'border-gray-300'
+                    } rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                    placeholder="••••••••"
+                  />
+                  {formErrors.confirm_password && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.confirm_password}</p>
+                  )}
                 </div>
 
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={loading}
                   className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                 >
-                  {isLoading ? (
+                  {loading ? (
                     <>
                       <svg
                         className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
@@ -235,10 +299,6 @@ export default function SignupPage() {
               </Link>
             </div>
           </div>
-
-          <div className="mt-8 text-center text-sm text-gray-500">
-            <p>By creating an account, you agree to our Terms of Service and Privacy Policy.</p>
-          </div>
         </div>
       </main>
 
@@ -260,6 +320,6 @@ export default function SignupPage() {
         </div>
       </footer>
     </div>
-  )
+  );
 }
 

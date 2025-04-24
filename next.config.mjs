@@ -19,14 +19,23 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Enable image optimization for better performance
   images: {
-    unoptimized: true,
+    // Set domains if you're loading images from external domains
+    domains: [],
   },
   experimental: {
     webpackBuildWorker: true,
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
+    // Enable optimizations for faster builds and better performance
+    optimizeCss: true,
+    scrollRestoration: true,
   },
+  // Enable SWC minification for faster builds
+  swcMinify: true,
+  // Add output configuration for Docker deployment
+  output: 'standalone',
 }
 
 if (userConfig) {

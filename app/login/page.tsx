@@ -1,52 +1,58 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { Eye, EyeOff } from "lucide-react"
+import { useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+
+import Link from "next/link"
+import { useAuth } from '@/context/AuthContext'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const { login } = useAuth()
+  
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
+
+  useEffect(() => {
+    // Check if user just registered
+    const registered = searchParams.get('registered')
+    if (registered === 'true') {
+      setSuccessMessage('Account created successfully! Please sign in.')
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    // Basic validation
-    if (!email.trim()) {
-      setError("Please enter your email address")
-      return
-    }
-
-    if (!password) {
-      setError("Please enter your password")
-      return
-    }
-
     setError("")
+    setSuccessMessage("")
+    
+    if (!email) {
+      setError("Email is required")
+      return
+    }
+    
+    if (!password) {
+      setError("Password is required")
+      return
+    }
+
     setIsLoading(true)
 
-    // Simulate API call delay
-    setTimeout(() => {
-      // In a real app, this would be an actual authentication API call
-      // For demo purposes, we'll just redirect to the dashboard
-
-      // Store user info in localStorage to simulate a logged-in state
-      localStorage.setItem("isLoggedIn", "true")
-      localStorage.setItem("userName", email.split("@")[0])
-
-      // Redirect to dashboard
-      router.push("/")
-
+    try {
+      await login(email, password)
+      // The login function in auth context handles redirection
+    } catch (err: any) {
+      setError(err.message || "Failed to login. Please check your credentials.")
+    } finally {
       setIsLoading(false)
-    }, 1500)
+    }
   }
 
   return (
@@ -54,47 +60,49 @@ export default function LoginPage() {
       {/* Header with logo */}
       <header className="py-6 px-8 border-b border-gray-200 bg-white">
         <div className="flex items-center">
-          <div className="h-8 w-8 relative">
-            <svg viewBox="0 0 24 24" className="h-8 w-8 text-blue-500">
-              <path
-                d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M9.5 15.5C10.8807 15.5 12 14.3807 12 13C12 11.6193 10.8807 10.5 9.5 10.5C8.11929 10.5 7 11.6193 7 13C7 14.3807 8.11929 15.5 9.5 15.5Z"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M14.5 8.5C15.8807 8.5 17 7.38071 17 6C17 4.61929 15.8807 3.5 14.5 3.5C13.1193 3.5 12 4.61929 12 6C12 7.38071 13.1193 8.5 14.5 8.5Z"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M14.5 20.5C15.8807 20.5 17 19.3807 17 18C17 16.6193 15.8807 15.5 14.5 15.5C13.1193 15.5 12 16.6193 12 18C12 19.3807 13.1193 20.5 14.5 20.5Z"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path d="M7 6H12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M12 18H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <span className="ml-2 font-semibold text-xl">
-            <span className="text-blue-500">Idea</span>Verse
-          </span>
+          <Link href="/" className="flex items-center">
+            <div className="h-8 w-8 relative">
+              <svg viewBox="0 0 24 24" className="h-8 w-8 text-blue-500">
+                <path
+                  d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M9.5 15.5C10.8807 15.5 12 14.3807 12 13C12 11.6193 10.8807 10.5 9.5 10.5C8.11929 10.5 7 11.6193 7 13C7 14.3807 8.11929 15.5 9.5 15.5Z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M14.5 8.5C15.8807 8.5 17 7.38071 17 6C17 4.61929 15.8807 3.5 14.5 3.5C13.1193 3.5 12 4.61929 12 6C12 7.38071 13.1193 8.5 14.5 8.5Z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M14.5 20.5C15.8807 20.5 17 19.3807 17 18C17 16.6193 15.8807 15.5 14.5 15.5C13.1193 15.5 12 16.6193 12 18C12 19.3807 13.1193 20.5 14.5 20.5Z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path d="M7 6H12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M12 18H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <span className="ml-2 font-semibold text-xl">
+              <span className="text-blue-500">Idea</span>Verse
+            </span>
+          </Link>
         </div>
       </header>
 
@@ -110,6 +118,10 @@ export default function LoginPage() {
 
               {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">{error}</div>
+              )}
+
+              {successMessage && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-md text-sm">{successMessage}</div>
               )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
