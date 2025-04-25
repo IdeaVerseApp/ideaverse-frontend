@@ -6,6 +6,17 @@ interface UserProfileProps {
 }
 
 export default function UserProfile({ userData }: UserProfileProps) {
+  // If no user data is provided, return a message
+  if (!userData) {
+    return (
+      <div className="max-w-4xl mx-auto pt-8 pb-24 px-4">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 mb-6 text-center">
+          <p className="text-lg text-gray-600">Please log in to view your profile.</p>
+        </div>
+      </div>
+    );
+  }
+
   // Get user information or use defaults if not available
   const userInfo = userData?.personalInformation[0]
   const userName = userInfo?.name || "Researcher"

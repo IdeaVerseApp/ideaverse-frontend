@@ -3,90 +3,84 @@
 import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import { usePathname } from "next/navigation"
+import { Menu, X } from "lucide-react"
+import { ThemeToggle } from "./ui/theme-toggle"
 
-export default function Navbar() {
-  const { user, loading, logout } = useAuth()
+interface NavbarProps {
+  userName?: string | null;
+  userInitial?: string | null;
+  sidebarOpen?: boolean;
+  setSidebarOpen?: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+export default function Navbar({ userName, userInitial, sidebarOpen, setSidebarOpen }: NavbarProps) {
+  const { user, logout, isAuthenticated } = useAuth()
   const pathname = usePathname()
 
-  const isActive = (path: string) => pathname === path
+  const handleLogout = async () => {
+    try {
+      await logout()
+    } catch (error) {
+      console.error("Logout failed:", error)
+    }
+  }
+
+  const toggleSidebar = () => {
+    if (setSidebarOpen) {
+      setSidebarOpen(!sidebarOpen)
+    }
+  }
 
   return (
-    <nav className="bg-white shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex">
-            <div className="flex-shrink-0 flex items-center">
-              <Link href="/" className="text-xl font-bold text-indigo-600">
-                IdeaVerse
-              </Link>
-            </div>
-            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-              <Link
-                href="/dashboard"
-                className={`${
-                  isActive('/dashboard')
-                    ? 'border-indigo-500 text-gray-900'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/ideas"
-                className={`${
-                  isActive('/ideas')
-                    ? 'border-indigo-500 text-gray-900'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
-              >
-                Ideas
-              </Link>
-            </div>
-          </div>
-          <div className="hidden sm:ml-6 sm:flex sm:items-center">
-            {loading ? (
-              <div className="animate-pulse h-8 w-24 bg-gray-200 rounded"></div>
-            ) : user ? (
-              <div className="ml-3 relative">
-                <div className="flex items-center space-x-4">
-                  <Link
-                    href="/userprofile"
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    {user.full_name || user.username}
-                  </Link>
-                  <button
-                    onClick={() => logout()}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    Logout
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-4">
-                <Link
-                  href="/login"
-                  className={`${
-                    isActive('/login')
-                      ? 'text-indigo-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  } text-sm font-medium`}
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/signup"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                >
-                  Sign up
-                </Link>
-              </div>
-            )}
+    <div 
+      className="fixed top-0 right-0 h-16 border-b border-gray-200 bg-white dark:bg-gray-900 dark:border-gray-800 z-20 transition-all duration-300"
+      style={{ 
+        left: sidebarOpen ? '16rem' : '4rem', // 16rem (w-64) when open, 4rem (w-16) when closed
+      }}
+    >
+      <div className="flex h-full items-center justify-between px-4">
+        <div className="flex items-center">
+          <div className="text-sm font-medium text-gray-700 dark:text-gray-200">
+            {pathname === "/" && "Dashboard"}
+            {pathname?.startsWith("/ideas") && "Ideas"}
+            {pathname === "/code" && "Code"}
+            {pathname === "/paper" && "Papers"}
+            {pathname === "/userprofile" && "Profile"}
+            {pathname === "/settings" && "Settings"}
           </div>
         </div>
+
+        <div className="flex items-center space-x-4">
+          {/* Theme Toggle */}
+          <ThemeToggle />
+          
+          {isAuthenticated && userName && userInitial && (
+            <div className="flex items-center">
+              <div className="h-8 w-8 bg-blue-500 rounded-full flex items-center justify-center text-white">
+                <span className="text-sm">{userInitial}</span>
+              </div>
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-200 hidden sm:inline">{userName}</span>
+            </div>
+          )}
+          
+          {isAuthenticated ? (
+            <button
+              onClick={handleLogout}
+              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            >
+              Logout
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            >
+              Login
+            </Link>
+          )}
+        </div>
       </div>
-    </nav>
+    </div>
   )
 }
 

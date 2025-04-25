@@ -1,7 +1,7 @@
 "use client";
 
 import { AuthResponse, getCurrentUser, login, logout, refreshToken } from '../services/auth-service';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
@@ -13,6 +13,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   loading: boolean;
+  refreshAuthState: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,7 +22,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthResponse['user'] | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshAttempted, setRefreshAttempted] = useState(false);
   const router = useRouter();
+
+  // Function to refresh authentication state
+  const refreshAuthState = useCallback(async () => {
+    try {
+      const storedToken = localStorage.getItem('token');
+      if (storedToken) {
+        setToken(storedToken);
+        try {
+          const userData = await getCurrentUser();
+          setUser(userData);
+          return true;
+        } catch (error) {
+          if (!refreshAttempted) {
+            setRefreshAttempted(true);
+            // If fetching user data fails, attempt token refresh
+            try {
+              const newToken = await refreshToken();
+              setToken(newToken);
+              const userData = await getCurrentUser();
+              setUser(userData);
+              return true;
+            } catch (refreshError) {
+              // If refresh fails, clear auth state
+              await handleLogout(false);
+              return false;
+            }
+          } else {
+            // Already attempted refresh once, clear auth state
+            await handleLogout(false);
+            return false;
+          }
+        }
+      } else {
+        setUser(null);
+        setToken(null);
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to refresh auth state:', error);
+      await handleLogout(false);
+      return false;
+    }
+  }, [refreshAttempted]);
 
   // Set up axios interceptor for token refresh
   useEffect(() => {
@@ -37,14 +82,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             // Attempt to refresh the token
             const newToken = await refreshToken();
+            // Update auth state
+            setToken(newToken);
             // Update the token in the current request
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
             // Retry the original request
             return axios(originalRequest);
           } catch (refreshError) {
             // If refresh fails, logout and redirect to login
-            await handleLogout();
-            router.push('/login');
+            await handleLogout(true);
             return Promise.reject(refreshError);
           }
         }
@@ -57,55 +103,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       axios.interceptors.response.eject(interceptor);
     };
-  }, [token, router]);
+  }, [token]);
 
+  // Initialize auth state
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const storedToken = localStorage.getItem('token');
-        if (storedToken) {
-          setToken(storedToken);
-          try {
-            const userData = await getCurrentUser();
-            setUser(userData);
-          } catch (error) {
-            // If fetching user data fails, attempt token refresh
-            try {
-              await refreshToken();
-              const userData = await getCurrentUser();
-              setUser(userData);
-            } catch (refreshError) {
-              // If refresh fails, clear tokens
-              localStorage.removeItem('token');
-              localStorage.removeItem('refresh_token');
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Failed to initialize auth:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('refresh_token');
+        await refreshAuthState();
       } finally {
         setLoading(false);
       }
     };
 
     initializeAuth();
-  }, []);
+  }, [refreshAuthState]);
+
+  // Re-check auth state on window focus
+  useEffect(() => {
+    const handleFocus = async () => {
+      if (!loading && !user) {
+        await refreshAuthState();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', handleFocus);
+      return () => {
+        window.removeEventListener('focus', handleFocus);
+      };
+    }
+  }, [loading, refreshAuthState, user]);
 
   const handleLogin = async (email: string, password: string) => {
+    setLoading(true);
     try {
       const response = await login({ email, password });
       setUser(response.user);
       setToken(response.access_token);
+      setRefreshAttempted(false);
       router.push('/dashboard');
       return response;
     } catch (error) {
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogout = async (redirect = true) => {
+    setLoading(true);
     try {
       await logout();
     } catch (error) {
@@ -113,6 +159,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setUser(null);
       setToken(null);
+      setRefreshAttempted(false);
+      if (redirect) {
+        router.push('/login');
+      }
+      setLoading(false);
     }
   };
 
@@ -121,10 +172,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         token,
-        isAuthenticated: !!user,
+        isAuthenticated: !!user && !!token,
         login: handleLogin,
         logout: handleLogout,
         loading,
+        refreshAuthState,
       }}
     >
       {children}

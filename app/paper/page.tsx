@@ -7,33 +7,39 @@ import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import ResearchPaperWriting from "@/components/research-paper-writing"
 import type { UserData } from "@/types/user"
+import { useAuth } from "@/context/AuthContext"
 
 export default function PaperPage() {
   const pathname = usePathname()
   const [userData, setUserData] = useState<UserData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const { isAuthenticated } = useAuth()
 
   useEffect(() => {
     const fetchUserData = async () => {
       setIsLoading(true)
       try {
-        // Mock data for now
-        const mockData: UserData = {
-          personalInformation: [
-            {
-              id: 1,
-              name: "Researcher Smith",
-              email: "researcher@example.com",
-              role: "Principal Investigator",
-              institution: "University Research Lab",
-              joinDate: "2023-01-15",
-            },
-          ],
-          researchIdeas: [],
+        // Only fetch or set user data if authenticated
+        if (isAuthenticated) {
+          // Mock data for now
+          const mockData: UserData = {
+            personalInformation: [
+              {
+                id: 1,
+                name: "Researcher Smith",
+                email: "researcher@example.com",
+                role: "Principal Investigator",
+                institution: "University Research Lab",
+                joinDate: "2023-01-15",
+              },
+            ],
+            researchIdeas: [],
+          }
+          setUserData(mockData)
+        } else {
+          setUserData(null)
         }
-
-        setUserData(mockData)
       } catch (error) {
         console.error("Error fetching user data:", error)
       } finally {
@@ -42,11 +48,11 @@ export default function PaperPage() {
     }
 
     fetchUserData()
-  }, [])
+  }, [isAuthenticated])
 
-  // Get user information
-  const userName = userData?.personalInformation[0]?.name || "Researcher"
-  const userInitial = userName.charAt(0)
+  // Get user information - only if authenticated
+  const userName = isAuthenticated && userData?.personalInformation[0]?.name || null
+  const userInitial = userName ? userName.charAt(0) : null
 
   // Only render this page if we're actually on the paper route
   if (pathname !== "/paper") {

@@ -3,9 +3,11 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { FileText, BookOpen, Edit, AlignLeft, Download, Share2 } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
 
 export default function ResearchPaperWriting() {
   const router = useRouter()
+  const { isAuthenticated } = useAuth()
   const [selectedSection, setSelectedSection] = useState("Full Paper")
   const [researchTopic, setResearchTopic] = useState("")
   const [error, setError] = useState("")
@@ -16,10 +18,8 @@ export default function ResearchPaperWriting() {
       return
     }
 
-    // Check if user is logged in
-    const isLoggedIn = localStorage.getItem("isLoggedIn")
-
-    if (!isLoggedIn) {
+    // Check if user is logged in using auth context
+    if (!isAuthenticated) {
       // Redirect to login page if not logged in
       router.push("/login")
       return

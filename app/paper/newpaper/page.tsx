@@ -23,6 +23,7 @@ import {
 import Sidebar from "@/components/sidebar"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
+import { useAuth } from "@/context/AuthContext"
 
 // Define paper section types
 type PaperSection = {
@@ -39,9 +40,10 @@ export default function NewPaperPage() {
   const [paperContent, setPaperContent] = useState("")
   const [activeSection, setActiveSection] = useState("editor")
   const [activePaperSection, setActivePaperSection] = useState<string>("abstract")
+  const { isAuthenticated } = useAuth()
   const [userData, setUserData] = useState({
-    name: "Researcher Smith",
-    initial: "R",
+    name: isAuthenticated ? "Researcher Smith" : "Guest User",
+    initial: isAuthenticated ? "R" : "G",
   })
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [paperTitle, setPaperTitle] = useState("")

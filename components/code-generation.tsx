@@ -5,9 +5,11 @@ import { useState, useRef, type ChangeEvent } from "react"
 import { Code, X } from "lucide-react"
 import { useIdea } from "@/context/IdeaContext"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/context/AuthContext"
 
 export default function CodeGeneration({ ideaId }: { ideaId?: string | number }) {
   const router = useRouter()
+  const { isAuthenticated } = useAuth()
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [error, setError] = useState<{ message: string; type: "upload" | "experiment" | "general" } | null>(null)
@@ -90,10 +92,8 @@ export default function CodeGeneration({ ideaId }: { ideaId?: string | number })
       return
     }
 
-    // Check if user is logged in
-    const isLoggedIn = localStorage.getItem("isLoggedIn")
-
-    if (!isLoggedIn) {
+    // Check if user is logged in using auth context
+    if (!isAuthenticated) {
       // Redirect to login page if not logged in
       router.push("/login")
       return
@@ -116,10 +116,8 @@ export default function CodeGeneration({ ideaId }: { ideaId?: string | number })
   // Update the handleGenerateFromScratch function to check for login status
 
   const handleGenerateFromScratch = () => {
-    // Check if user is logged in
-    const isLoggedIn = localStorage.getItem("isLoggedIn")
-
-    if (!isLoggedIn) {
+    // Check if user is logged in using auth context
+    if (!isAuthenticated) {
       // Redirect to login page if not logged in
       router.push("/login")
       return

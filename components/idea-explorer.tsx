@@ -2,151 +2,218 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Diamond, Sparkles, Lightbulb } from "lucide-react"
+import { Diamond, Sparkles, Lightbulb, Loader2, ChevronDown } from "lucide-react"
 import { useIdea } from "@/context/IdeaContext"
+import { generateIdeas } from "@/services/idea-service"
+import { useAuth } from "@/context/AuthContext"
 
 interface IdeaExplorerProps {
   ideaId?: string | number
 }
 
+type GenerationMethod = "auto" | "reverse-spark" | "idea-chain" | "diamond-mine"
+
 export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
   const router = useRouter()
   const { experiment, setExperiment } = useIdea()
+  const { isAuthenticated } = useAuth()
   const [researchIdea, setResearchIdea] = useState(experiment)
   const [error, setError] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [numIdeas, setNumIdeas] = useState(5)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [selectedMethod, setSelectedMethod] = useState<GenerationMethod>("diamond-mine")
 
-  const handleGenerateIdeas = () => {
+  const generationMethods = {
+    "auto": {
+      name: "Auto",
+      description: "Adapts to each query",
+      icon: <Sparkles className="h-4 w-4" />
+    },
+    "reverse-spark": {
+      name: "Reverse Spark",
+      description: "Start with problems, uncover solutions",
+      icon: <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M7 16l10-10M17 16V6h-10" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    },
+    "idea-chain": {
+      name: "Idea Chain",
+      description: "Expand ideas step by step",
+      icon: <Lightbulb className="h-4 w-4" />
+    },
+    "diamond-mine": {
+      name: "Diamond Mine",
+      description: "Generate many ideas, refine the best",
+      icon: <Diamond className="h-4 w-4" />
+    }
+  }
+
+  const handleGenerateIdeas = async () => {
     if (!researchIdea.trim()) {
       setError("Please enter a research idea before generating")
       return
     }
 
-    // Check if user is logged in
-    const isLoggedIn = localStorage.getItem("isLoggedIn")
-
-    if (!isLoggedIn) {
+    // Check if user is logged in using auth context
+    if (!isAuthenticated) {
       // Redirect to login page if not logged in
       router.push("/login")
       return
     }
 
     setError("")
-    // Update the global state
-    setExperiment(researchIdea)
-    // Navigate to the idea exploration page
-    router.push("/ideaexploration")
+    setIsLoading(true)
+    
+    try {
+      // Update the global state
+      setExperiment(researchIdea)
+      
+      // Call the API to generate ideas
+      const response = await generateIdeas({
+        task_description: researchIdea,
+        code: "",
+        num_ideas: numIdeas,
+        num_reflections: 3,
+        system_prompt: `Use the ${generationMethods[selectedMethod].name} method: ${generationMethods[selectedMethod].description}`
+      })
+      
+      // Navigate to the idea details page if we have a task ID
+      if (response && response.task_id) {
+        router.push(`/ideas/${response.task_id}`)
+      } else {
+        setError("Failed to start idea generation. Please try again.")
+      }
+    } catch (err) {
+      console.error("Error generating ideas:", err)
+      setError("An error occurred while generating ideas. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
-    <div className="max-w-3xl mx-auto pt-16 pb-24 px-4">
-      <div className="flex flex-col items-center mb-12">
-        <div className="h-20 w-20 mb-6">
-          <svg viewBox="0 0 100 60" className="h-full w-full text-purple-600">
-            <path
-              d="M30,30 C30,16.8 41.8,5 55,5 C68.2,5 80,16.8 80,30 C80,43.2 68.2,55 55,55 C48.5,55 42.5,52.5 38,48.5 C33.5,52.5 27.5,55 21,55 C7.8,55 -4,43.2 -4,30 C-4,16.8 7.8,5 21,5 C27.5,5 33.5,7.5 38,11.5 C42.5,7.5 48.5,5 55,5"
-              stroke="currentColor"
-              strokeWidth="6"
-              fill="none"
-              strokeLinecap="round"
+    <div className="min-h-screen bg-background">
+      <div className="max-w-3xl mx-auto pt-20 pb-12 px-6">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-foreground mb-4 text-center">Which idea topic would you like to explore?</h1>
+        </div>
+
+        <div className="space-y-4">
+          {/* Research idea input */}
+          <div className="relative">
+            <textarea
+              id="research-idea"
+              className={`w-full p-4 pr-32 bg-gray-50 dark:bg-gray-700 border ${
+                error ? "border-red-500" : "border-gray-200 dark:border-gray-600"
+              } rounded-lg focus:ring-2 focus:ring-slate-500/30 focus:border-transparent resize-none text-gray-900 dark:text-gray-100`}
+              placeholder="Describe your idea topic..."
+              rows={3}
+              value={researchIdea}
+              onChange={(e) => {
+                setResearchIdea(e.target.value)
+                if (e.target.value.trim()) setError("")
+              }}
+              disabled={isLoading}
             />
-          </svg>
-        </div>
-        <h1 className="text-4xl font-bold text-gray-800 mb-4 text-center">What research idea are you exploring?</h1>
-      </div>
+            {researchIdea.trim() && (
+              <button
+                className={`absolute right-3 bottom-3 px-4 py-1.5 rounded-lg font-medium transition-colors flex items-center justify-center ${
+                  isLoading 
+                    ? 'bg-slate-600/70 dark:bg-slate-300/80' 
+                    : 'bg-slate-600 hover:bg-slate-700 dark:bg-slate-300 dark:hover:bg-slate-200'
+                } text-white dark:text-slate-800`}
+                onClick={handleGenerateIdeas}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  'Generate'
+                )}
+              </button>
+            )}
+          </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 mb-8">
-        <div className="flex flex-col space-y-4">
-          {/* Text input for research ideas - now takes up the whole box */}
-          <textarea
-            className={`w-full p-4 border ${error ? "border-red-500" : "border-gray-200"} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none min-h-[150px]`}
-            placeholder="Enter your research idea here..."
-            value={researchIdea}
-            onChange={(e) => {
-              setResearchIdea(e.target.value)
-              if (e.target.value.trim()) setError("")
-            }}
-          />
+          {error && <div className="text-red-500 dark:text-red-400 text-sm">{error}</div>}
 
-          {error && <div className="text-red-500 text-sm">{error}</div>}
+          {/* Controls row */}
+          <div className="flex items-center gap-4 bg-gray-100 dark:bg-gray-800/50 p-3 rounded-lg">
+            {/* Generation method selector - dropdown */}
+            <div className="relative w-40">
+              <button
+                type="button"
+                className="w-full flex items-center justify-between px-3 py-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-500/30 dark:focus:ring-slate-300/30 text-gray-800 dark:text-gray-200"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                disabled={isLoading}
+              >
+                <div className="flex items-center">
+                  <span className="mr-2 text-slate-600 dark:text-slate-300">
+                    {generationMethods[selectedMethod].icon}
+                  </span>
+                  <span className="truncate">{generationMethods[selectedMethod].name}</span>
+                </div>
+                <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0" />
+              </button>
 
-          {/* Generate button */}
-          <button
-            className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors"
-            onClick={handleGenerateIdeas}
-          >
-            Generate Ideas
-          </button>
-        </div>
-      </div>
+              {dropdownOpen && (
+                <div className="absolute z-10 mt-1 w-40 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg">
+                  <ul className="py-1 max-h-60 overflow-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                    {Object.entries(generationMethods).map(([key, method]) => (
+                      <li key={key}>
+                        <button
+                          type="button"
+                          className={`w-full text-left px-3 py-1.5 flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                            selectedMethod === key 
+                              ? "bg-slate-100/50 dark:bg-slate-300/20 text-slate-700 dark:text-slate-200" 
+                              : "text-gray-800 dark:text-gray-200"
+                          }`}
+                          onClick={() => {
+                            setSelectedMethod(key as GenerationMethod)
+                            setDropdownOpen(false)
+                          }}
+                        >
+                          <span className="mr-2 text-slate-600 dark:text-slate-300">{method.icon}</span>
+                          <div>
+                            <p className="font-medium text-sm">{method.name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{method.description}</p>
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
 
-      <div className="space-y-4">
-        <div className="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-          <Sparkles className="h-5 w-5 text-gray-500 mt-1" />
-          <div className="ml-4">
-            <div className="font-medium">Auto</div>
-            <div className="text-sm text-gray-500">Adapts to each query</div>
+            {/* Number of ideas slider */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">Ideas:</span>
+              <div className="w-32">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    id="numIdeas"
+                    name="numIdeas"
+                    min="1"
+                    max="10"
+                    value={numIdeas}
+                    onChange={(e) => setNumIdeas(parseInt(e.target.value))}
+                    className="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-slate-600 dark:accent-slate-300"
+                    disabled={isLoading}
+                  />
+                  <span className="text-sm font-medium text-slate-600 dark:text-slate-300 min-w-[2ch]">{numIdeas}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-          <svg
-            className="h-5 w-5 text-gray-500 mt-1"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path d="M7 16l10-10M17 16V6h-10" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <div className="ml-4">
-            <div className="font-medium">Reverse Spark</div>
-            <div className="text-sm text-gray-500">Start with problems, uncover solutions.</div>
-          </div>
-        </div>
-
-        <div className="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-          <Lightbulb className="h-5 w-5 text-gray-500 mt-1" />
-          <div className="ml-4">
-            <div className="font-medium">Idea Chain</div>
-            <div className="text-sm text-gray-500">Expand ideas step by step</div>
-          </div>
-        </div>
-
-        <div className="flex items-start p-4 border border-gray-200 rounded-lg bg-blue-50 hover:bg-blue-100">
-          <Diamond className="h-5 w-5 text-blue-600 mt-1" />
-          <div className="ml-4">
-            <div className="font-medium">Diamond Mine</div>
-            <div className="text-sm text-gray-500">Generate many ideas, refine the best.</div>
-          </div>
-          <div className="ml-auto">
-            <svg className="h-5 w-5 text-green-500" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M5 12l5 5L20 7"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-8 grid grid-cols-2 gap-4">
-        <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-          <div className="font-medium">I Claims</div>
-          <div className="text-sm text-gray-500">ous Agent.</div>
-        </div>
-        <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 flex items-start">
-          <div className="h-8 w-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-800 mr-3">
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 16v-4M12 8h.01" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <div>
-            <div className="font-medium">Anthropic's Blind Audit Game</div>
-          </div>
+        <div className="text-sm text-gray-500 dark:text-gray-400 mt-4">
+          <a href="#" className="text-slate-600 hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-200 font-medium">Read our guide to effective idea generation →</a>
         </div>
       </div>
     </div>

@@ -4,21 +4,22 @@ import { useState, useEffect, useMemo, memo } from "react"
 import { Plus, MoreVertical, Star, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import type { UserData, ResearchIdea } from "@/types/user"
+import { useAuth } from "@/context/AuthContext"
 
 // Dropdown menu for idea actions - memoized to prevent unnecessary re-renders
 const IdeaActionsMenu = memo(({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   if (!isOpen) return null
 
   return (
-    <div className="absolute right-0 top-10 bg-white border border-gray-200 rounded-md shadow-md z-10 w-40">
+    <div className="absolute right-0 top-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-md z-10 w-40">
       <div className="py-1">
-        <button className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100">
-          <Star className="h-4 w-4 mr-2 text-gray-500" />
-          <span>Refine Idea</span>
+        <button className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700">
+          <Star className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+          <span className="dark:text-gray-200">Refine Idea</span>
         </button>
-        <button className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100">
+        <button className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700">
           <svg
-            className="h-4 w-4 mr-2 text-gray-500"
+            className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -27,11 +28,11 @@ const IdeaActionsMenu = memo(({ isOpen, onClose }: { isOpen: boolean; onClose: (
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
-          <span>Copy Idea</span>
+          <span className="dark:text-gray-200">Copy Idea</span>
         </button>
-        <button className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100">
+        <button className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700">
           <svg
-            className="h-4 w-4 mr-2 text-gray-500"
+            className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -41,7 +42,7 @@ const IdeaActionsMenu = memo(({ isOpen, onClose }: { isOpen: boolean; onClose: (
             <polyline points="17 21 17 13 7 13 7 21"></polyline>
             <polyline points="7 3 7 8 15 8"></polyline>
           </svg>
-          <span>Save Idea</span>
+          <span className="dark:text-gray-200">Save Idea</span>
         </button>
       </div>
     </div>
@@ -62,12 +63,11 @@ const ResearchIdeaCard = memo(({
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const router = useRouter()
+  const { isAuthenticated } = useAuth()
 
   const handleExpandGenerate = () => {
-    // Check if user is logged in - moved to a local variable to avoid localStorage access on each render
-    const isLoggedIn = localStorage.getItem("isLoggedIn")
-
-    if (!isLoggedIn) {
+    // Check if user is logged in using auth context
+    if (!isAuthenticated) {
       // Redirect to login page if not logged in
       router.push("/login")
       return
@@ -77,21 +77,21 @@ const ResearchIdeaCard = memo(({
   }
 
   return (
-    <div className="border border-gray-200 rounded-lg bg-white mb-6 overflow-hidden">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 mb-6 overflow-hidden">
       <div className="p-6">
         <div className="flex justify-between items-start mb-3">
-          <h3 className="text-2xl font-bold text-gray-700">
+          <h3 className="text-2xl font-bold text-gray-700 dark:text-gray-200">
             #{index + 1}. {idea.title}
           </h3>
           <div className="relative">
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-1 rounded-full hover:bg-gray-100">
-              <MoreVertical className="h-5 w-5 text-gray-500" />
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+              <MoreVertical className="h-5 w-5 text-gray-500 dark:text-gray-400" />
             </button>
             <IdeaActionsMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
           </div>
         </div>
 
-        <div className="text-gray-500 mb-4">
+        <div className="text-gray-500 dark:text-gray-400 mb-4">
           <p>Seed Idea: {idea.experiment.split(" ").slice(0, 8).join(" ")}...</p>
           <div className="flex flex-wrap gap-x-8 mt-2">
             <span>Idea</span>
@@ -100,17 +100,17 @@ const ResearchIdeaCard = memo(({
           </div>
         </div>
 
-        <p className="text-gray-600 mb-3">{idea.experiment}</p>
+        <p className="text-gray-600 dark:text-gray-300 mb-3">{idea.experiment}</p>
 
-        <div className="text-gray-500 text-sm">
+        <div className="text-gray-500 dark:text-gray-400 text-sm">
           <p>
-            The number of pages is 8... <button className="text-blue-500 hover:underline">Read more</button>
+            The number of pages is 8... <button className="text-blue-500 dark:text-blue-400 hover:underline">Read more</button>
           </p>
         </div>
 
         <div className="flex justify-between items-center mt-4">
           <div className="flex items-center">
-            <div className="text-blue-500">
+            <div className="text-blue-500 dark:text-blue-400">
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
               </svg>
@@ -119,21 +119,21 @@ const ResearchIdeaCard = memo(({
 
           <button
             onClick={handleExpandGenerate}
-            className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-md flex items-center"
+            className="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white px-4 py-2 rounded-md flex items-center"
           >
             <span>Expand & Generate</span>
           </button>
         </div>
       </div>
 
-      <div className="flex border-t border-gray-200">
-        <div className="w-1/2 p-4 flex flex-col items-center border-r border-gray-200">
-          <div className="text-sm text-gray-500 mb-1">Novelty Score</div>
-          <div className="text-4xl font-bold text-blue-400">{idea.novelty * 10}</div>
+      <div className="flex border-t border-gray-200 dark:border-gray-700">
+        <div className="w-1/2 p-4 flex flex-col items-center border-r border-gray-200 dark:border-gray-700">
+          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Novelty Score</div>
+          <div className="text-4xl font-bold text-blue-400 dark:text-blue-500">{idea.novelty * 10}</div>
         </div>
         <div className="w-1/2 p-4 flex flex-col items-center">
-          <div className="text-sm text-gray-500 mb-1">Feasibility Score</div>
-          <div className="text-4xl font-bold text-blue-400">{idea.feasibility * 10}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Feasibility Score</div>
+          <div className="text-4xl font-bold text-blue-400 dark:text-blue-500">{idea.feasibility * 10}</div>
         </div>
       </div>
     </div>
@@ -244,102 +244,141 @@ export default function Dashboard({ onNavigate, userData }: DashboardProps) {
       {/* Header Section */}
       <div className="flex flex-col items-center mb-12 text-center">
         <div className="h-16 w-16 mb-4">
-          <svg viewBox="0 0 100 60" className="h-full w-full text-blue-500">
+          <svg viewBox="0 0 100 60" className="h-full w-full text-blue-500 dark:text-blue-400">
             <path
               d="M30,30 C30,16.8 41.8,5 55,5 C68.2,5 80,16.8 80,30 C80,43.2 68.2,55 55,55 C48.5,55 42.5,52.5 38,48.5 C33.5,52.5 27.5,55 21,55 C7.8,55 -4,43.2 -4,30 C-4,16.8 7.8,5 21,5 C27.5,5 33.5,7.5 38,11.5 C42.5,7.5 48.5,5 55,5"
               stroke="currentColor"
-              strokeWidth="6"
+              strokeWidth="3"
               fill="none"
-              strokeLinecap="round"
             />
+            <circle cx="21" cy="30" r="12" fill="currentColor" fillOpacity="0.2" />
+            <circle cx="55" cy="30" r="12" fill="currentColor" fillOpacity="0.2" />
           </svg>
         </div>
-        <h1 className="text-4xl font-bold text-gray-800 mb-2">IdeaVerse</h1>
-        <p className="text-xl text-gray-600 max-w-3xl">
-          Discover, develop, and document groundbreaking research ideas with AI assistance
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-3">
+          Welcome back, {userName}
+        </h1>
+        <p className="text-gray-600 dark:text-gray-300 max-w-md">
+          Explore your recent research ideas or create new ones. Your AI-powered research companion is ready to help.
         </p>
       </div>
 
-      {/* Welcome Message */}
-      {userData && (
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl font-medium">
-            Welcome back, <span className="font-bold">{userName}</span>
-          </h2>
-        </div>
-      )}
-
-      {/* Action Button */}
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold">Research Ideas</h2>
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
         <button
-          className="flex items-center px-6 py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
           onClick={() => handleNavigate("ideas")}
+          className="bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 px-6 py-3 rounded-md font-medium flex items-center justify-center"
         >
           <Plus className="h-5 w-5 mr-2" />
-          <span>Create New Research Thread</span>
+          <span>Generate New Idea</span>
+        </button>
+        <button className="bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400 px-6 py-3 rounded-md font-medium flex items-center justify-center">
+          <svg
+            className="h-5 w-5 mr-2"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+          <span>View All Papers</span>
         </button>
       </div>
 
-      {/* Research Ideas Section */}
-      <div className="mb-8">
+      {/* Recent Ideas Section */}
+      <div className="mb-12">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white">Recent Ideas</h2>
+          <button className="text-blue-600 dark:text-blue-400 flex items-center text-sm font-medium hover:underline">
+            <span>View All</span>
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </button>
+        </div>
+
         {isLoading ? (
-          <div className="space-y-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="border border-gray-200 rounded-lg p-6 animate-pulse">
-                <div className="h-7 w-3/4 bg-gray-200 rounded mb-4"></div>
-                <div className="h-4 w-1/2 bg-gray-200 rounded mb-3"></div>
-                <div className="h-4 w-full bg-gray-200 rounded mb-2"></div>
-                <div className="h-4 w-5/6 bg-gray-200 rounded mb-4"></div>
-                <div className="flex justify-between mt-6">
-                  <div className="h-10 w-24 bg-gray-200 rounded"></div>
-                  <div className="h-10 w-40 bg-gray-200 rounded"></div>
-                </div>
-              </div>
-            ))}
+          <div className="flex justify-center items-center h-40">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 dark:border-blue-400"></div>
           </div>
         ) : (
-          <div>
-            {memoizedIdeas}
-          </div>
+          <div>{memoizedIdeas}</div>
         )}
       </div>
 
-      {/* Quick Access Section */}
-      <div className="mt-12">
-        <h2 className="text-2xl font-bold mb-6">Quick Access</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div
-            className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer bg-white"
-            onClick={() => router.push("/ideas")}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold">Idea Explorer</h3>
-              <ChevronRight className="h-5 w-5 text-gray-400" />
+      {/* Research Metrics */}
+      <div>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Research Metrics</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-medium text-gray-800 dark:text-white">Ideas Generated</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Last 30 days</p>
+              </div>
+              <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-md">
+                <svg
+                  className="h-6 w-6 text-blue-600 dark:text-blue-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                </svg>
+              </div>
             </div>
-            <p className="text-gray-600 mb-4">Brainstorm and develop new research concepts with AI assistance</p>
+            <div className="text-3xl font-bold text-gray-800 dark:text-white">48</div>
+            <div className="mt-1 text-sm text-green-600 dark:text-green-400">+12% from previous period</div>
           </div>
 
-          <div
-            className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer bg-white"
-            onClick={() => router.push("/code")}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold">Code Generation</h3>
-              <ChevronRight className="h-5 w-5 text-gray-400" />
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-medium text-gray-800 dark:text-white">Average Novelty</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">All ideas</p>
+              </div>
+              <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-md">
+                <svg
+                  className="h-6 w-6 text-purple-600 dark:text-purple-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                  <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                  <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                </svg>
+              </div>
             </div>
-            <p className="text-gray-600 mb-4">Generate implementation code for your research algorithms and models</p>
+            <div className="text-3xl font-bold text-gray-800 dark:text-white">7.4</div>
+            <div className="mt-1 text-sm text-red-600 dark:text-red-400">-2.1% from previous period</div>
           </div>
 
-          <div
-            className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer bg-white"
-            onClick={() => router.push("/paper")}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold">Research Paper</h3>
-              <ChevronRight className="h-5 w-5 text-gray-400" />
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-medium text-gray-800 dark:text-white">Code Snippets</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Generated</p>
+              </div>
+              <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-md">
+                <svg
+                  className="h-6 w-6 text-green-600 dark:text-green-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <polyline points="16 18 22 12 16 6"></polyline>
+                  <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+              </div>
             </div>
-            <p className="text-gray-600 mb-4">Draft and structure research papers with AI writing assistance</p>
+            <div className="text-3xl font-bold text-gray-800 dark:text-white">124</div>
+            <div className="mt-1 text-sm text-green-600 dark:text-green-400">+18.3% from previous period</div>
           </div>
         </div>
       </div>

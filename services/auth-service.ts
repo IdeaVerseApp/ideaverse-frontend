@@ -17,41 +17,66 @@ const api = axios.create({
 const tokenCache = {
   accessToken: null as string | null,
   refreshToken: null as string | null,
+  initialLoadDone: false,
+  
   getAccessToken: () => {
-    if (!tokenCache.accessToken) {
+    if (!tokenCache.accessToken && typeof window !== 'undefined') {
       tokenCache.accessToken = localStorage.getItem('token');
     }
     return tokenCache.accessToken;
   },
+  
   getRefreshToken: () => {
-    if (!tokenCache.refreshToken) {
+    if (!tokenCache.refreshToken && typeof window !== 'undefined') {
       tokenCache.refreshToken = localStorage.getItem('refresh_token');
     }
     return tokenCache.refreshToken;
   },
+  
   setAccessToken: (token: string | null) => {
     tokenCache.accessToken = token;
-    if (token) {
-      localStorage.setItem('token', token);
-    } else {
-      localStorage.removeItem('token');
+    if (typeof window !== 'undefined') {
+      if (token) {
+        localStorage.setItem('token', token);
+      } else {
+        localStorage.removeItem('token');
+      }
     }
   },
+  
   setRefreshToken: (token: string | null) => {
     tokenCache.refreshToken = token;
-    if (token) {
-      localStorage.setItem('refresh_token', token);
-    } else {
-      localStorage.removeItem('refresh_token');
+    if (typeof window !== 'undefined') {
+      if (token) {
+        localStorage.setItem('refresh_token', token);
+      } else {
+        localStorage.removeItem('refresh_token');
+      }
     }
   },
+  
   clearTokens: () => {
     tokenCache.accessToken = null;
     tokenCache.refreshToken = null;
-    localStorage.removeItem('token');
-    localStorage.removeItem('refresh_token');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
+    }
+  },
+  
+  loadTokensFromStorage: () => {
+    if (typeof window !== 'undefined' && !tokenCache.initialLoadDone) {
+      tokenCache.accessToken = localStorage.getItem('token');
+      tokenCache.refreshToken = localStorage.getItem('refresh_token');
+      tokenCache.initialLoadDone = true;
+    }
   }
 };
+
+// Initialize tokens from storage on module load
+if (typeof window !== 'undefined') {
+  tokenCache.loadTokensFromStorage();
+}
 
 export interface LoginCredentials {
   email: string;

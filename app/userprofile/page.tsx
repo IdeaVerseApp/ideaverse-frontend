@@ -7,6 +7,7 @@ import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import UserProfile from "@/components/user-profile"
 import type { UserData } from "@/types/user"
+import { useAuth } from "@/context/AuthContext"
 
 export default function UserProfilePage() {
   const router = useRouter()
@@ -14,8 +15,15 @@ export default function UserProfilePage() {
   const [userData, setUserData] = useState<UserData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const { isAuthenticated } = useAuth()
 
   useEffect(() => {
+    // Redirect to login if not authenticated
+    if (!isAuthenticated) {
+      router.push('/login')
+      return
+    }
+
     const fetchUserData = async () => {
       setIsLoading(true)
       try {
@@ -93,14 +101,14 @@ export default function UserProfilePage() {
     }
 
     fetchUserData()
-  }, [])
+  }, [isAuthenticated, router])
 
   // Get user information
-  const userName = userData?.personalInformation[0]?.name || "Researcher"
-  const userInitial = userName.charAt(0)
+  const userName = userData?.personalInformation[0]?.name || null
+  const userInitial = userName ? userName.charAt(0) : null
 
-  // Only render this page if we're actually on the userprofile route
-  if (pathname !== "/userprofile") {
+  // Only render this page if we're actually on the userprofile route and user is authenticated
+  if (pathname !== "/userprofile" || !isAuthenticated) {
     return null
   }
 
