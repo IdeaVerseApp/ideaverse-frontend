@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useRef, type ChangeEvent } from "react"
-import { Code, X } from "lucide-react"
+import { Code, X, HelpCircle } from "lucide-react"
 import { useIdea } from "@/context/IdeaContext"
 import { useRouter } from "next/navigation"
 
@@ -12,8 +12,11 @@ export default function CodeGeneration({ ideaId }: { ideaId?: string | number })
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [error, setError] = useState<{ message: string; type: "upload" | "experiment" | "general" } | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
-  const { experiment } = useIdea() // Use the global state
+  const { experiment, setGeneratedData } = useIdea() // Use the global state
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const apiEndpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [inputValue, setInputValue] = useState("");
 
   // Handle file upload
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -82,6 +85,9 @@ export default function CodeGeneration({ ideaId }: { ideaId?: string | number })
       return
     }
 
+    console.log("Experiment")
+    console.log(experiment)
+
     if (!experiment.trim()) {
       setError({
         message: "No research idea found. Please generate a research idea first.",
@@ -106,36 +112,98 @@ export default function CodeGeneration({ ideaId }: { ideaId?: string | number })
     localStorage.setItem("codeGenerationType", "fromFile")
     localStorage.setItem("uploadedFileName", uploadedFile.name)
 
-    // Simulate code generation and navigate to the generated code page
-    setTimeout(() => {
-      setIsGenerating(false)
-      router.push("/code/generated")
-    }, 1000)
+    // Call generateCode, which will handle navigation
+    generateCode(uploadedFile, experiment)
+  }
+
+  const generateCode = async (uploadedFile: File | null, experiment: string) => {
+    try {
+      console.log("** generateCode starts **")
+      const currentResearchIdea = experiment
+
+      const formData = new FormData();
+      formData.append("prompt", currentResearchIdea);
+
+      console.log(formData)
+
+      if (uploadedFile) {
+        const uploadedFileName = localStorage.getItem("uploadedFileName") || "{}"
+        console.log(uploadedFileName)
+
+        const blob = new Blob([uploadedFile], { type: "text/plain" });
+        formData.append("file", blob, uploadedFile.name);
+      }
+
+      const response = await fetch(`${apiEndpoint}/aider-generate/`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+
+      const finalCode = data.generated_code || "# No code returned by Aider.";
+      const output = data.output || ""; // Assuming the output is also returned
+
+      // Set the generated data in context
+      setGeneratedData({ code: finalCode, output });
+
+      console.log("DATA", data)
+
+      // Navigate to the generated code page after the API call finishes
+      router.push("/code/generated");
+
+    } catch (error) {
+      console.error("** generateCode - Error")
+      console.error(error)
+    }
   }
 
   // Update the handleGenerateFromScratch function to check for login status
 
   const handleGenerateFromScratch = () => {
-    // Check if user is logged in
-    const isLoggedIn = localStorage.getItem("isLoggedIn")
-
-    if (!isLoggedIn) {
-      // Redirect to login page if not logged in
-      router.push("/login")
-      return
+    // Check if the experiment is valid
+    if (!experiment.trim()) {
+        setError({
+            message: "No research idea found. Please generate a research idea first.",
+            type: "experiment",
+        });
+        return;
     }
 
-    setError(null)
-    setIsGenerating(true)
+    // Check if user is logged in
+    const isLoggedIn = localStorage.getItem("isLoggedIn");
 
-    // Store generation type in localStorage
-    localStorage.setItem("codeGenerationType", "fromScratch")
+    if (!isLoggedIn) {
+        // Redirect to login page if not logged in
+        router.push("/login");
+        return;
+    }
 
-    // Simulate code generation and navigate to the generated code page
-    setTimeout(() => {
-      setIsGenerating(false)
-      router.push("/code/generated")
-    }, 1000)
+    setError(null);
+    setIsGenerating(true);
+
+    // Call generateCode, which will handle navigation
+    generateCode(null, experiment);
+  }
+
+  const handleGenerate = () => {
+    // Store the input value in localStorage under the key currentResearchIdea
+    if (inputValue) {
+        localStorage.setItem("currentResearchIdea", inputValue);
+    }
+    generateCode(null, inputValue)
+
+    console.log("Generated value:", inputValue);
+    // Close the modal after generating
+    setIsModalOpen(false);
+    // Reset input value if needed
+    setInputValue("");
+  }
+
+  const handleCancel = () => {
+    // Close the modal without doing anything
+    setIsModalOpen(false);
+    // Reset input value if needed
+    setInputValue("");
   }
 
   return (

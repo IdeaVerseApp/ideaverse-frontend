@@ -11,10 +11,7 @@ import { useIdea } from "@/context/IdeaContext"
 export default function GeneratedCodePage() {
   const router = useRouter()
   const pathname = usePathname()
-  const { experiment } = useIdea()
-  const [isLoading, setIsLoading] = useState(true)
-  const [generationType, setGenerationType] = useState<"fromFile" | "fromScratch" | null>(null)
-  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null)
+  const { generatedData, clearGeneratedData } = useIdea()
   const [generationTime, setGenerationTime] = useState("0 MINS 0 SECS")
   const [elapsedTime, setElapsedTime] = useState(0)
   const [isGenerating, setIsGenerating] = useState(true)
@@ -25,46 +22,7 @@ export default function GeneratedCodePage() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [copySuccess, setCopySuccess] = useState(false)
 
-  // Sample generated code
-  const generatedCode = `import random
-import statistics
-
-def generate_random_numbers(count, start, end):
-    """Generate a list of random numbers between start and end."""
-    return [random.randint(start, end) for _ in range(count)]
-
-def calculate_statistics(numbers):
-    """Calculate and display various statistical measures from the list."""
-    mean = statistics.mean(numbers)
-    median = statistics.median(numbers)
-    stdev = statistics.stdev(numbers) if len(numbers) > 1 else 0
-    minimum = min(numbers)
-    maximum = max(numbers)
-    range_val = maximum - minimum
-    
-    print(f"\\nStatistics Summary:\\nMean: {mean}\\nMedian: {median}\\nStandard Deviation: {stdev}\\n" +
-          f"Minimum: {minimum}\\nMaximum: {maximum}\\nRange: {range_val}")
-
-def count_occurrences(numbers):
-    """Count the occurrences of each number in the list."""
-    occurrences = {num: numbers.count(num) for num in set(numbers)}
-    
-    for num, count in sorted(occurrences.items(), key=lambda x: x[1]):
-        print(f"Number {num} appears {count} time(s) in the list, accounting for {(count/len(numbers)*100):.2f}%" +
-              f" of the total numbers, which is quite significant for analysis.")
-`
-
   useEffect(() => {
-    // Get generation type from localStorage
-    const type = localStorage.getItem("codeGenerationType") as "fromFile" | "fromScratch" | null
-    setGenerationType(type)
-
-    // Get uploaded file name if available
-    if (type === "fromFile") {
-      const fileName = localStorage.getItem("uploadedFileName")
-      setUploadedFileName(fileName)
-    }
-
     // Simulate generation time
     const timer = setInterval(() => {
       setElapsedTime((prev) => {
@@ -79,7 +37,6 @@ def count_occurrences(numbers):
     // Simulate generation completion after 4 seconds
     setTimeout(() => {
       setIsGenerating(false)
-      setIsLoading(false)
       clearInterval(timer)
     }, 4000)
 
@@ -87,12 +44,15 @@ def count_occurrences(numbers):
   }, [])
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(generatedCode)
-    setCopySuccess(true)
-    setTimeout(() => setCopySuccess(false), 2000)
+    if (generatedData) {
+      navigator.clipboard.writeText(generatedData.code)
+      setCopySuccess(true)
+      setTimeout(() => setCopySuccess(false), 2000)
+    }
   }
 
   const handleGoBack = () => {
+    clearGeneratedData()
     router.push("/code")
   }
 
@@ -143,33 +103,19 @@ def count_occurrences(numbers):
             </button>
           </div>
 
-          {isLoading ? (
+          {isGenerating || !generatedData ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="w-12 h-12 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin mb-4"></div>
-              <p className="text-lg text-gray-600">Loading generated code...</p>
+              <p className="text-lg text-gray-600">Generating Code...</p>
             </div>
           ) : (
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
               {/* Header */}
               <div className="flex justify-between items-center p-4 border-b border-gray-200">
                 <div className="flex items-center">
-                  <span className="text-blue-500 font-medium">{isGenerating ? "GENERATING" : "GENERATED"}</span>
-                  {isGenerating && (
-                    <div className="flex ml-2">
-                      <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse mr-1"></div>
-                      <div
-                        className="h-2 w-2 bg-blue-500 rounded-full animate-pulse mr-1"
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
-                      <div
-                        className="h-2 w-2 bg-blue-500 rounded-full animate-pulse"
-                        style={{ animationDelay: "0.4s" }}
-                      ></div>
-                    </div>
-                  )}
+                  <span className="text-blue-500 font-medium">GENERATED</span>
                 </div>
                 <div className="flex items-center">
-                  <span className="text-blue-500 mr-4">GENERATION TIME : {generationTime}</span>
                   <button
                     onClick={handleCopyCode}
                     className="text-blue-500 hover:text-blue-700 flex items-center"
@@ -186,41 +132,16 @@ def count_occurrences(numbers):
                 <div className="overflow-auto h-full w-full" style={{ overflowX: "auto", overflowY: "auto" }}>
                   <pre className="bg-gray-900 text-gray-100 text-sm whitespace-pre min-w-full">
                     <code>
-                      {generatedCode.split("\n").map((line, i) => (
+                      {generatedData.code.split("\n").map((line, i) => (
                         <div key={i} className="flex">
                           <span className="inline-block w-8 text-right mr-4 text-gray-500 flex-shrink-0">{i + 1}</span>
-                          <span className="flex-1 whitespace-nowrap">
-                            {line
-                              .replace(
-                                /import\s+(\w+)/g,
-                                '<span class="text-pink-400">import</span> <span class="text-yellow-300">$1</span>',
-                              )
-                              .replace(
-                                /def\s+(\w+)/g,
-                                '<span class="text-cyan-300">def</span> <span class="text-yellow-300">$1</span>',
-                              )
-                              .replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, '<span class="text-yellow-300">$&</span>')
-                              .replace(/(\w+)\(/g, '<span class="text-yellow-300">$1</span>(')
-                              .replace(/return/g, '<span class="text-pink-400">return</span>')
-                              .replace(/for/g, '<span class="text-pink-400">for</span>')
-                              .replace(/in/g, '<span class="text-pink-400">in</span>')
-                              .replace(/if/g, '<span class="text-pink-400">if</span>')
-                              .replace(/else/g, '<span class="text-pink-400">else</span>')
-                              .replace(/print/g, '<span class="text-green-400">print</span>')}
-                          </span>
+                          <span className="flex-1 whitespace-nowrap">{line}</span>
                         </div>
                       ))}
                     </code>
                   </pre>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 flex justify-center p-2 bg-gray-900 bg-opacity-80">
-                  <div className="flex space-x-4">
-                    <div className="h-2 w-2 bg-white rounded-full"></div>
-                    <div className="h-2 w-2 bg-white rounded-full"></div>
-                    <div className="h-2 w-2 bg-white rounded-full"></div>
-                    <div className="h-2 w-2 bg-white rounded-full"></div>
-                  </div>
-                </div>
+                
               </div>
 
               {/* Action Buttons */}
@@ -230,11 +151,8 @@ def count_occurrences(numbers):
                     onClick={handleProceed}
                     className="flex items-center px-6 py-3 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors"
                   >
-                    <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    <span className="mr-2">CLICK PROCEED TO EXECUTE THE GENERATED CODE OVER THE PLATFORM</span>
-                    <span className="text-xs">(EXECUTION WILL BE DONE AND RESULTS WILL BE GENERATED)</span>
+                    <span className="mr-2 text-sm">CLICK PROCEED TO EXECUTE THE GENERATED CODE OVER THE PLATFORM</span>
+                    <br></br><span className="text-xs">(EXECUTION WILL BE DONE AND RESULTS WILL BE GENERATED)</span>
                   </button>
                 </div>
 
@@ -257,8 +175,9 @@ def count_occurrences(numbers):
                       <path d="M17 8l-5-5-5 5" strokeLinecap="round" strokeLinejoin="round" />
                       <path d="M12 3v12" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
-                    <span className="text-gray-700">
-                      RUN THE GENERATED CODE ON YOUR LOCAL MACHINE AND UPLOAD THE SUMMARY OF RESULTS IN JSON FORMAT
+                    <span className="text-gray-700 text-sm">
+                      Run the generated code on your local machine 
+                      <br></br> Upload the summary of results in JSON format
                     </span>
                   </div>
                   <div className="flex items-center">

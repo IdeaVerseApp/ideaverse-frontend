@@ -11,7 +11,7 @@ interface IdeaExplorerProps {
 
 export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
   const router = useRouter()
-  const { experiment, setExperiment } = useIdea()
+  const { experiment, setExperiment, clearGeneratedData } = useIdea()
   const [researchIdea, setResearchIdea] = useState(experiment)
   const [error, setError] = useState("")
 
@@ -33,6 +33,7 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
     setError("")
     // Update the global state
     setExperiment(researchIdea)
+    clearGeneratedData()
     // Navigate to the idea exploration page
     router.push("/ideaexploration")
   }
