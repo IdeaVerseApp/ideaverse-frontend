@@ -33,6 +33,7 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
     setError("")
     // Update the global state
     setExperiment(researchIdea)
+    console.log("from here 1")
     clearGeneratedData()
     // Navigate to the idea exploration page
     router.push("/ideaexploration")

@@ -7,6 +7,7 @@ import Sidebar from "@/components/sidebar"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import { useIdea } from "@/context/IdeaContext"
+import { json } from "stream/consumers"
 
 export default function GeneratedCodePage() {
   const router = useRouter()
@@ -15,7 +16,7 @@ export default function GeneratedCodePage() {
   const { generatedData, clearGeneratedData, setOutputData } = useIdea()
   const [generationTime, setGenerationTime] = useState("0 MINS 0 SECS")
   const [elapsedTime, setElapsedTime] = useState(0)
-  const [isGenerating, setIsGenerating] = useState(true)
+  const [isGenerating, setIsGenerating] = useState(false)
   const [userData, setUserData] = useState({
     name: "Researcher Smith",
     initial: "R",
@@ -24,41 +25,83 @@ export default function GeneratedCodePage() {
   const [copySuccess, setCopySuccess] = useState(false)
 
   useEffect(() => {
-    // Simulate generation time
-    const timer = setInterval(() => {
-      setElapsedTime((prev) => {
-        const newTime = prev + 1
-        const mins = Math.floor(newTime / 60)
-        const secs = newTime % 60
-        setGenerationTime(`${mins} MINS ${secs} SECS`)
-        return newTime
-      })
-    }, 1000)
+    // Check if generatedData is available immediately
+    console.log("Generated Data: ")
+    console.log(generatedData)
+    if (generatedData) {
+      setIsGenerating(false); // Set to false if data is available
+    } else {
+      // Simulate generation time
+      //generatedData = localStorage.getItem("")
+      const timer = setInterval(() => {
+        setElapsedTime((prev) => {
+          const newTime = prev + 1
+          const mins = Math.floor(newTime / 60)
+          const secs = newTime % 60
+          setGenerationTime(`${mins} MINS ${secs} SECS`)
+          return newTime
+        })
+      }, 1000)
 
-    // Simulate generation completion after 4 seconds
-    setTimeout(() => {
-      setIsGenerating(false)
-      clearInterval(timer)
-    }, 4000)
+      // Simulate generation completion after 4 seconds
+      const timeout = setTimeout(() => {
+        setIsGenerating(false)
+        clearInterval(timer)
+      }, 4000)
 
-    return () => clearInterval(timer)
-  }, [])
+      return () => {
+        clearInterval(timer)
+        clearTimeout(timeout)
+      }
+    }
+  }, [generatedData]) // Add generatedData as a dependency
+
 
   const handleCopyCode = () => {
     if (generatedData) {
-      navigator.clipboard.writeText(generatedData.code)
-      setCopySuccess(true)
-      setTimeout(() => setCopySuccess(false), 2000)
+      const textToCopy = generatedData.code;
+
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(textToCopy)
+          .then(() => {
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 5000);
+          })
+          .catch((err) => {
+            console.error("Failed to copy: ", err);
+          });
+      } else {
+        // Fallback for browsers that do not support the Clipboard API
+        const textArea = document.createElement("textarea");
+        textArea.value = textToCopy;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand("copy");
+          setCopySuccess(true);
+          setTimeout(() => setCopySuccess(false), 2000);
+        } catch (err) {
+          console.error("Fallback: Failed to copy: ", err);
+        } finally {
+          document.body.removeChild(textArea);
+        }
+      }
     }
   }
 
   const handleGoBack = () => {
+    console.log("from here 2")
     clearGeneratedData()
     router.push("/code")
   }
 
+  const handleGoToResults = () => {
+    router.push("/code/results")
+  }
+
+  
+
   const handleProceed = async () => {
-    // In a real app, this would execute the code
     // alert("Code execution would start here")
     try {
       const generatedCode = {"code": generatedData?.code}
@@ -73,6 +116,11 @@ export default function GeneratedCodePage() {
       console.log(data)
 
       setOutputData(data.result);
+      if(data.result)
+        setOutputData(data.result)
+      else if (data.error){
+        setOutputData("Error - " + data.error)
+      }
       console.log(generatedData)
       router.push('/code/results')
       
@@ -82,11 +130,35 @@ export default function GeneratedCodePage() {
     
   }
 
-  const handleUpload = () => {
-    // In a real app, this would handle file upload
-    // alert("File upload would start here")
-    router.push('/code/results')
-  }
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+
+      // Create a FileReader to read the file
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const jsonData = JSON.parse(event.target?.result as string); // Parse the JSON data
+          console.log("json data")
+          console.log(jsonData)
+          setOutputData(jsonData); // Update the output in context
+        } catch (error) {
+          console.error("Error parsing JSON:", error);
+          // Handle error (e.g., show an alert)
+        }
+      };
+
+      reader.readAsText(file); // Read the file as text
+    }
+  };
+
+  const handleUploadButtonClick = () => {
+    // This function can be used to trigger any additional logic if needed
+    console.log("Upload button clicked");
+    router.push('/code/results'); // Navigate to results page
+
+  };
 
   // Only render this page if we're actually on the code/generated route
   if (pathname !== "/code/generated") {
@@ -118,11 +190,18 @@ export default function GeneratedCodePage() {
 
         {/* Content */}
         <div className="flex-1 p-8">
-          <div className="mb-8">
+          <div className="mb-8 flex justify-between items-center">
             <button onClick={handleGoBack} className="flex items-center text-sm text-gray-600 hover:text-gray-900">
               <ArrowLeft className="h-4 w-4 mr-1" />
               Back to Code Generation
             </button>
+           
+            {generatedData?.output && ( // Check if generatedData.output is not null
+              <button onClick={handleGoToResults} className="flex items-center text-sm text-gray-600 hover:text-gray-900">
+                <ArrowRight className="h-4 w-4 mr-1" />
+                View Results
+              </button>
+            )}
           </div>
 
           {isGenerating || !generatedData ? (
@@ -157,7 +236,7 @@ export default function GeneratedCodePage() {
                       {generatedData.code.split("\n").map((line, i) => (
                         <div key={i} className="flex">
                           <span className="inline-block w-8 text-right mr-4 text-gray-500 flex-shrink-0">{i + 1}</span>
-                          <span className="flex-1 whitespace-nowrap">{line}</span>
+                          <span className="flex-1 whitespace-pre-wrap">{line}</span>
                         </div>
                       ))}
                     </code>
@@ -169,11 +248,11 @@ export default function GeneratedCodePage() {
               {/* Action Buttons */}
               <div className="p-6 space-y-8">
                 <div className="flex flex-col items-center justify-center">
-                  <button
+                <button
                     onClick={handleProceed}
-                    className="flex items-center px-6 py-3 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors"
+                    className="flex items-center px-6 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors"
                   >
-                    <span className="mr-2 text-sm">PROCEED</span>
+                    <span>PROCEED</span>
                   </button>
                   <span className="text-xs mt-2 text-center">
                     Click Proceed to execute the generated code over the platform
@@ -210,20 +289,12 @@ export default function GeneratedCodePage() {
                     <input
                       type="file"
                       accept=".json"
-                      className="mr-4  rounded-md px-3 py-2"
-                      onChange={(e) => {
-                        // Handle file upload logic here
-                        const files = e.target.files;
-                        if (files && files.length > 0) {
-                          const file = files[0];
-                          // Process the uploaded file
-                          console.log(file);
-                        }
-                      }}
+                      className="mr-4 rounded-md px-3 py-2"
+                      onChange={handleUpload}
                     />
                     <button
-                      onClick={handleUpload}
-                      className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors flex items-center"
+                      onClick={handleUploadButtonClick}
+                      className="px-4 py-2 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors flex items-center"
                     >
                       <span>UPLOAD</span>
                       <ArrowRight className="h-4 w-4 ml-2" />

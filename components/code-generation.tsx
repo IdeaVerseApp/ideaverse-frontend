@@ -160,51 +160,27 @@ export default function CodeGeneration({ ideaId }: { ideaId?: string | number })
   // Update the handleGenerateFromScratch function to check for login status
 
   const handleGenerateFromScratch = () => {
-    // Check if the experiment is valid
-    if (!experiment.trim()) {
-        setError({
-            message: "No research idea found. Please generate a research idea first.",
-            type: "experiment",
-        });
-        return;
+    // Open the modal when this method is called
+    console.log("** handleGenerateFromScratch starts **")
+
+    try {
+      console.log("Experiment")
+      console.log(experiment)
+      setIsGenerating(true)
+      generateCode(null, experiment)
+
+  
+    } catch (error) {
+      console.error("** generateCode - Error")
+      console.error(error)
+      
     }
-
-    // Check if user is logged in
-    const isLoggedIn = localStorage.getItem("isLoggedIn");
-
-    if (!isLoggedIn) {
-        // Redirect to login page if not logged in
-        router.push("/login");
-        return;
-    }
-
-    setError(null);
-    setIsGenerating(true);
-
-    // Call generateCode, which will handle navigation
-    generateCode(null, experiment);
+    
   }
 
-  const handleGenerate = () => {
-    // Store the input value in localStorage under the key currentResearchIdea
-    if (inputValue) {
-        localStorage.setItem("currentResearchIdea", inputValue);
-    }
-    generateCode(null, inputValue)
 
-    console.log("Generated value:", inputValue);
-    // Close the modal after generating
-    setIsModalOpen(false);
-    // Reset input value if needed
-    setInputValue("");
-  }
 
-  const handleCancel = () => {
-    // Close the modal without doing anything
-    setIsModalOpen(false);
-    // Reset input value if needed
-    setInputValue("");
-  }
+ 
 
   return (
     <div className="max-w-3xl mx-auto pt-16 pb-24 px-4">

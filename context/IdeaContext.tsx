@@ -23,7 +23,15 @@ export function IdeaProvider({ children }: { children: ReactNode }) {
   const [experiment, setExperiment] = useState<string>("")
   const [generatedData, setGeneratedData] = useState<GeneratedData | null>(null)
 
-  // Initialize from localStorage on client side
+  // Load from localStorage if available
+  useEffect(() => {
+    const storedData = localStorage.getItem("generatedData")
+    if (storedData) {
+      setGeneratedData(JSON.parse(storedData))
+    }
+  }, [])
+
+  // Load experiment from localStorage
   useEffect(() => {
     const storedIdea = localStorage.getItem("currentResearchIdea")
     if (storedIdea) {
@@ -31,17 +39,19 @@ export function IdeaProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Update localStorage when experiment changes
+  // Save experiment to localStorage
   useEffect(() => {
     if (experiment) {
       localStorage.setItem("currentResearchIdea", experiment)
     }
   }, [experiment])
 
-  // Clear generated data when experiment changes
+  // Save generatedData to localStorage whenever it changes
   useEffect(() => {
-    clearGeneratedData(); // Clear generated data when the experiment changes
-  }, [experiment]);
+    if (generatedData) {
+      localStorage.setItem("generatedData", JSON.stringify(generatedData))
+    }
+  }, [generatedData])
 
   const clearExperiment = () => {
     setExperiment("")
@@ -50,13 +60,14 @@ export function IdeaProvider({ children }: { children: ReactNode }) {
 
   const clearGeneratedData = () => {
     setGeneratedData(null)
+    localStorage.removeItem("generatedData") // Clear from localStorage
   }
 
   const setOutputData = (output: string) => {
     if (generatedData) {
-      setGeneratedData({ ...generatedData, output }); // Update only the output property
+      setGeneratedData({ ...generatedData, output })
     }
-  };
+  }
 
   return (
     <IdeaContext.Provider value={{ 
