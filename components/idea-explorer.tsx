@@ -80,75 +80,11 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
         </div>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-          <Sparkles className="h-5 w-5 text-gray-500 mt-1" />
-          <div className="ml-4">
-            <div className="font-medium">Auto</div>
-            <div className="text-sm text-gray-500">Adapts to each query</div>
-          </div>
-        </div>
-
-        <div className="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-          <svg
-            className="h-5 w-5 text-gray-500 mt-1"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path d="M7 16l10-10M17 16V6h-10" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <div className="ml-4">
-            <div className="font-medium">Reverse Spark</div>
-            <div className="text-sm text-gray-500">Start with problems, uncover solutions.</div>
-          </div>
-        </div>
-
-        <div className="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-          <Lightbulb className="h-5 w-5 text-gray-500 mt-1" />
-          <div className="ml-4">
-            <div className="font-medium">Idea Chain</div>
-            <div className="text-sm text-gray-500">Expand ideas step by step</div>
-          </div>
-        </div>
-
-        <div className="flex items-start p-4 border border-gray-200 rounded-lg bg-blue-50 hover:bg-blue-100">
-          <Diamond className="h-5 w-5 text-blue-600 mt-1" />
-          <div className="ml-4">
-            <div className="font-medium">Diamond Mine</div>
-            <div className="text-sm text-gray-500">Generate many ideas, refine the best.</div>
-          </div>
-          <div className="ml-auto">
-            <svg className="h-5 w-5 text-green-500" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M5 12l5 5L20 7"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-        </div>
-      </div>
+      
 
       <div className="mt-8 grid grid-cols-2 gap-4">
-        <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-          <div className="font-medium">I Claims</div>
-          <div className="text-sm text-gray-500">ous Agent.</div>
-        </div>
-        <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 flex items-start">
-          <div className="h-8 w-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-800 mr-3">
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 16v-4M12 8h.01" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <div>
-            <div className="font-medium">Anthropic's Blind Audit Game</div>
-          </div>
-        </div>
+       
+   
       </div>
     </div>
   )

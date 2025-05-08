@@ -14,6 +14,7 @@ interface IdeaContextType {
   generatedData: GeneratedData | null;
   setGeneratedData: (data: GeneratedData) => void;
   clearGeneratedData: () => void;
+  setOutputData: (output: string) => void;
 }
 
 const IdeaContext = createContext<IdeaContextType | undefined>(undefined)
@@ -51,6 +52,12 @@ export function IdeaProvider({ children }: { children: ReactNode }) {
     setGeneratedData(null)
   }
 
+  const setOutputData = (output: string) => {
+    if (generatedData) {
+      setGeneratedData({ ...generatedData, output }); // Update only the output property
+    }
+  };
+
   return (
     <IdeaContext.Provider value={{ 
       experiment, 
@@ -58,7 +65,8 @@ export function IdeaProvider({ children }: { children: ReactNode }) {
       clearExperiment, 
       generatedData, 
       setGeneratedData, 
-      clearGeneratedData 
+      clearGeneratedData,
+      setOutputData
     }}>
       {children}
     </IdeaContext.Provider>

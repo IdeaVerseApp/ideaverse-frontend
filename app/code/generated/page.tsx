@@ -11,7 +11,8 @@ import { useIdea } from "@/context/IdeaContext"
 export default function GeneratedCodePage() {
   const router = useRouter()
   const pathname = usePathname()
-  const { generatedData, clearGeneratedData } = useIdea()
+  const apiEndpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
+  const { generatedData, clearGeneratedData, setOutputData } = useIdea()
   const [generationTime, setGenerationTime] = useState("0 MINS 0 SECS")
   const [elapsedTime, setElapsedTime] = useState(0)
   const [isGenerating, setIsGenerating] = useState(true)
@@ -56,14 +57,35 @@ export default function GeneratedCodePage() {
     router.push("/code")
   }
 
-  const handleProceed = () => {
+  const handleProceed = async () => {
     // In a real app, this would execute the code
-    alert("Code execution would start here")
+    // alert("Code execution would start here")
+    try {
+      const generatedCode = {"code": generatedData?.code}
+      console.log(generatedCode)
+      const response = await fetch(`${apiEndpoint}/run-code/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(generatedCode)
+      });
+      const data = await response.json();
+      // console.log(response)
+      console.log(data)
+
+      setOutputData(data.result);
+      console.log(generatedData)
+      router.push('/code/results')
+      
+    } catch (error) {
+      
+    }
+    
   }
 
   const handleUpload = () => {
     // In a real app, this would handle file upload
-    alert("File upload would start here")
+    // alert("File upload would start here")
+    router.push('/code/results')
   }
 
   // Only render this page if we're actually on the code/generated route
@@ -128,7 +150,7 @@ export default function GeneratedCodePage() {
               </div>
 
               {/* Code Display */}
-              <div className="relative h-[calc(100vh-350px)]">
+              <div className="overflow-auto h-[400px]">
                 <div className="overflow-auto h-full w-full" style={{ overflowX: "auto", overflowY: "auto" }}>
                   <pre className="bg-gray-900 text-gray-100 text-sm whitespace-pre min-w-full">
                     <code>
@@ -146,15 +168,19 @@ export default function GeneratedCodePage() {
 
               {/* Action Buttons */}
               <div className="p-6 space-y-8">
-                <div className="flex items-center justify-center">
+                <div className="flex flex-col items-center justify-center">
                   <button
                     onClick={handleProceed}
                     className="flex items-center px-6 py-3 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors"
                   >
-                    <span className="mr-2 text-sm">CLICK PROCEED TO EXECUTE THE GENERATED CODE OVER THE PLATFORM</span>
-                    <br></br><span className="text-xs">(EXECUTION WILL BE DONE AND RESULTS WILL BE GENERATED)</span>
+                    <span className="mr-2 text-sm">PROCEED</span>
                   </button>
+                  <span className="text-xs mt-2 text-center">
+                    Click Proceed to execute the generated code over the platform
+                  </span>
                 </div>
+
+                
 
                 <div className="flex items-center">
                   <div className="flex-1 border-t border-gray-300"></div>
@@ -181,23 +207,20 @@ export default function GeneratedCodePage() {
                     </span>
                   </div>
                   <div className="flex items-center">
-                    <div className="flex items-center mr-4 border border-gray-300 rounded-md px-3 py-2">
-                      <svg
-                        className="h-5 w-5 mr-2 text-gray-500"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path
-                          d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path d="M13 2v7h7" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      <span className="text-gray-700">base_file.json</span>
-                    </div>
+                    <input
+                      type="file"
+                      accept=".json"
+                      className="mr-4  rounded-md px-3 py-2"
+                      onChange={(e) => {
+                        // Handle file upload logic here
+                        const files = e.target.files;
+                        if (files && files.length > 0) {
+                          const file = files[0];
+                          // Process the uploaded file
+                          console.log(file);
+                        }
+                      }}
+                    />
                     <button
                       onClick={handleUpload}
                       className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors flex items-center"
