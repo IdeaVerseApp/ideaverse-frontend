@@ -28,6 +28,8 @@ export default function   GeneratedIdeas() {
 
   const fetchIdeas = async () => {
     setLoading(true)
+    setError(null) // Clear previous errors
+    
     try {
       const data = await getUserIdeas({
         sort_by: sortBy,
@@ -35,10 +37,18 @@ export default function   GeneratedIdeas() {
         status: statusFilter || undefined,
         limit: 50
       })
-      setIdeas(data)
-      setError(null)
-    } catch (err) {
-      setError("Failed to load ideas. Please try again.")
+      
+      // Check if we got a valid response (even if empty)
+      if (Array.isArray(data)) {
+        setIdeas(data)
+      } else {
+        // Handle unexpected response format
+        console.warn("Unexpected response format from getUserIdeas:", data)
+        setError("Received invalid data format from server")
+      }
+    } catch (err: any) {
+      // Show specific error message if available
+      setError(err?.message || "Failed to load ideas. Please try again.")
       console.error("Error fetching ideas:", err)
     } finally {
       setLoading(false)
@@ -122,7 +132,18 @@ export default function   GeneratedIdeas() {
           <span className="ml-2 text-gray-600 dark:text-gray-400">Loading ideas...</span>
         </div>
       ) : error ? (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400">{error}</div>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4 text-red-700 dark:text-red-400 flex items-center">
+          <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+          <div>
+            <p className="font-medium">{error}</p>
+            <button 
+              onClick={fetchIdeas} 
+              className="mt-2 text-sm bg-red-100 dark:bg-red-800 px-3 py-1 rounded-md hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
       ) : ideas.length === 0 ? (
         <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center">
           <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">No ideas generated yet</h3>
@@ -175,7 +196,9 @@ export default function   GeneratedIdeas() {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {ideas.map((idea) => (
+              {ideas
+                .filter(idea => idea.status.toLowerCase() !== 'started')
+                .map((idea) => (
                 <tr key={idea._id || idea.task_id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">

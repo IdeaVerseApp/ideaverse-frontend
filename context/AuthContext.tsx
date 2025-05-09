@@ -153,16 +153,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleLogout = async (redirect = true) => {
     setLoading(true);
     try {
-      await logout();
-    } catch (error) {
-      console.error('Logout failed:', error);
-    } finally {
+      // Try to logout from server, but continue with local logout regardless
+      try {
+        await logout();
+      } catch (error) {
+        console.warn('Server logout encountered an issue, proceeding with local logout', error);
+      }
+      
+      // Always clear local state
       setUser(null);
       setToken(null);
       setRefreshAttempted(false);
+      
       if (redirect) {
         router.push('/login');
       }
+    } finally {
       setLoading(false);
     }
   };

@@ -1,4 +1,4 @@
-import type { IdeaExplorationResult } from "@/types/idea-exploration"
+import type { IdeaExplorationResult, SimilarPaper } from "@/types/idea-exploration"
 import axios from "axios"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
@@ -7,7 +7,7 @@ interface IdeaGenerationTask {
   task_id?: string        // Optional, backend will generate if missing
   user_id?: string        // Optional, backend will default to "unknown"
   task_description: string // Required
-  code: string            // Required
+  code?: string           // Optional, can be empty string
   num_ideas: number       // Required
   num_reflections?: number
   reflection_rounds?: number
@@ -26,6 +26,7 @@ interface IdeaResponse {
   ideas: any[]
   reflection_rounds: number
   error?: string
+  similar_papers?: SimilarPaper[]
 }
 
 export async function generateIdeaExploration(researchIdea: string): Promise<IdeaExplorationResult> {
@@ -138,17 +139,65 @@ export async function getUserIdeas(params?: {
       return [];
     }
 
-    const response = await axios.get(`${API_URL}/ideas/user-tasks`, {
-      params,
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+    // Implement retry logic for transient errors
+    let retries = 2;
+    let lastError: any = null;
 
-    return response.data;
+    while (retries >= 0) {
+      try {
+        const response = await axios.get(`${API_URL}/ideas/user-tasks`, {
+          params,
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          // Add timeout to prevent hanging requests
+          timeout: 10000
+        });
+        
+        return response.data;
+      } catch (error: any) {
+        lastError = error;
+        
+        // Only retry on network errors or 5xx server errors
+        if (error.code === 'ECONNABORTED' || 
+            (error.response && error.response.status >= 500 && error.response.status < 600)) {
+          retries--;
+          if (retries >= 0) {
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1000 * (3 - retries)));
+            continue;
+          }
+        } else {
+          // Don't retry on other errors (auth errors, etc.)
+          break;
+        }
+      }
+    }
+
+    // If we got here, all retries failed or we encountered a non-retryable error
+    const errorMessage = lastError?.response?.data?.detail || 
+                         lastError?.message || 
+                         'Unknown error fetching ideas';
+                           
+    const statusCode = lastError?.response?.status || 500;
+    
+    console.error(`Error fetching user ideas (${statusCode}):`, errorMessage);
+    
+    // For server errors, return empty array instead of throwing to prevent UI breakage
+    if (statusCode >= 500) {
+      console.warn('Returning empty ideas array due to server error');
+      return [];
+    }
+    
+    throw {
+      message: errorMessage,
+      status: statusCode,
+      originalError: lastError
+    };
   } catch (error) {
     console.error('Error fetching user ideas:', error);
-    throw error;
+    // Return empty array as fallback to prevent UI from breaking
+    return [];
   }
 }
 

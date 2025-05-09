@@ -2,6 +2,7 @@ import "./globals.css"
 
 import { AuthProvider } from "../context/AuthContext"
 import { ThemeProvider } from "../components/theme-provider"
+import { IdeaProvider } from "../context/IdeaContext"
 import { Inter } from "next/font/google"
 import type { Metadata } from "next"
 import type React from "react"
@@ -27,7 +28,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>{children}</AuthProvider>
+          <IdeaProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </IdeaProvider>
         </ThemeProvider>
       </body>
     </html>

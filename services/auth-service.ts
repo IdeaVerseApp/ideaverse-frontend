@@ -240,7 +240,10 @@ export const logout = async (): Promise<void> => {
   } catch (error) {
     // Ensure tokens are removed even if server-side logout fails
     tokenCache.clearTokens();
-    throw handleApiError(error);
+    // Log the error details for debugging
+    console.warn('Server logout failed with error:', error);
+    // Don't throw error as local logout was successful
+    // The frontend only needs to know that tokens were cleared
   }
 };
 

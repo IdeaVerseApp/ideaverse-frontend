@@ -16,41 +16,41 @@ export default function IdeasPage() {
   const [userData, setUserData] = useState<UserData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
 
   useEffect(() => {
     const fetchUserData = async () => {
       setIsLoading(true)
       try {
-        // Only fetch or set user data if authenticated
-        if (isAuthenticated) {
-          // Mock data for now
-          const mockData: UserData = {
+        // Only set user data if authenticated
+        if (isAuthenticated && user) {
+          // Use actual authenticated user data
+          const userData: UserData = {
             personalInformation: [
               {
                 id: 1,
-                name: "Researcher Smith",
-                email: "researcher@example.com",
-                role: "Principal Investigator",
-                institution: "University Research Lab",
-                joinDate: "2023-01-15",
+                name: user.username || user.full_name || user.email,
+                email: user.email,
+                role: "Researcher",
+                institution: "Research Institution",
+                joinDate: new Date().toISOString(),
               },
             ],
             researchIdeas: [],
           }
-          setUserData(mockData)
+          setUserData(userData)
         } else {
           setUserData(null)
         }
       } catch (error) {
-        console.error("Error fetching user data:", error)
+        console.error("Error setting user data:", error)
       } finally {
         setIsLoading(false)
       }
     }
 
     fetchUserData()
-  }, [isAuthenticated])
+  }, [isAuthenticated, user])
 
   // Get user information - only if authenticated
   const userName = isAuthenticated && userData?.personalInformation[0]?.name || null
@@ -62,39 +62,39 @@ export default function IdeasPage() {
   }
 
   return (
-    <IdeaProvider>
-      <div className="flex min-h-screen bg-background dark:bg-background">
-        {/* Sidebar */}
-        <Sidebar
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* Sidebar */}
+      <Sidebar
+        userName={userName}
+        userInitial={userInitial}
+        activeView="ideas"
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+      />
+
+      {/* Main Content */}
+      <div
+        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${sidebarOpen ? "ml-64" : "ml-0"}`}
+      >
+        {/* Navbar */}
+        <Navbar
           userName={userName}
           userInitial={userInitial}
-          activeView="ideas"
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
         />
 
-        {/* Main Content */}
-        <div
-          className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${sidebarOpen ? "ml-64" : "ml-0"}`}
-        >
-          {/* Navbar */}
-          <Navbar
-            userName={userName}
-            userInitial={userInitial}
-            sidebarOpen={sidebarOpen}
-            setSidebarOpen={setSidebarOpen}
-          />
-
-          {/* Content */}
-          <div className="flex-1 text-foreground">
+        {/* Content */}
+        <div className="flex-1">
+          <IdeaProvider>
             <IdeaExplorer />
-          </div>
-
-          {/* Footer */}
-          <Footer />
+          </IdeaProvider>
         </div>
+
+        {/* Footer */}
+        <Footer />
       </div>
-    </IdeaProvider>
+    </div>
   )
 }
 

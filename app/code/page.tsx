@@ -7,6 +7,7 @@ import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import CodeGeneration from "@/components/code-generation"
 import type { UserData } from "@/types/user"
+import { useAuth } from "@/context/AuthContext"
 
 export default function CodePage() {
   const searchParams = useSearchParams()
@@ -14,6 +15,7 @@ export default function CodePage() {
   const [userData, setUserData] = useState<UserData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const { isAuthenticated, user } = useAuth()
 
   // Get ideaId from URL query parameters if available
   const ideaId = searchParams?.get("ideaId")
@@ -22,34 +24,37 @@ export default function CodePage() {
     const fetchUserData = async () => {
       setIsLoading(true)
       try {
-        // Mock data for now
-        const mockData: UserData = {
-          personalInformation: [
-            {
-              id: 1,
-              name: "Researcher Smith",
-              email: "researcher@example.com",
-              role: "Principal Investigator",
-              institution: "University Research Lab",
-              joinDate: "2023-01-15",
-            },
-          ],
-          researchIdeas: [],
+        if (isAuthenticated && user) {
+          // Use actual authenticated user data
+          const userData: UserData = {
+            personalInformation: [
+              {
+                id: 1,
+                name: user.username || user.full_name || user.email,
+                email: user.email,
+                role: "Researcher",
+                institution: "Research Institution",
+                joinDate: new Date().toISOString(),
+              },
+            ],
+            researchIdeas: [],
+          }
+          setUserData(userData)
+        } else {
+          setUserData(null)
         }
-
-        setUserData(mockData)
       } catch (error) {
-        console.error("Error fetching user data:", error)
+        console.error("Error setting user data:", error)
       } finally {
         setIsLoading(false)
       }
     }
 
     fetchUserData()
-  }, [])
+  }, [isAuthenticated, user])
 
   // Get user information
-  const userName = userData?.personalInformation[0]?.name || "Researcher"
+  const userName = userData?.personalInformation[0]?.name || "Guest"
   const userInitial = userName.charAt(0)
 
   // Only render this page if we're actually on the code route
@@ -58,7 +63,7 @@ export default function CodePage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Sidebar */}
       <Sidebar
         userName={userName}
@@ -82,7 +87,7 @@ export default function CodePage() {
 
         {/* Content */}
         <div className="flex-1">
-          <CodeGeneration ideaId={ideaId || undefined} />
+          <CodeGeneration ideaId={ideaId} />
         </div>
 
         {/* Footer */}

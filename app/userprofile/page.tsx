@@ -15,7 +15,7 @@ export default function UserProfilePage() {
   const [userData, setUserData] = useState<UserData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
 
   useEffect(() => {
     // Redirect to login if not authenticated
@@ -27,88 +27,86 @@ export default function UserProfilePage() {
     const fetchUserData = async () => {
       setIsLoading(true)
       try {
-        // This would be replaced with an actual API call
-        // const response = await fetch('/api/user');
-        // const data = await response.json();
-
-        // Mock data for now
-        const mockData: UserData = {
-          personalInformation: [
-            {
-              id: 1,
-              name: "Researcher Smith",
-              email: "researcher@example.com",
-              role: "Principal Investigator",
-              institution: "University Research Lab",
-              joinDate: "2023-01-15",
-            },
-          ],
-          researchIdeas: [
-            {
-              id: 1,
-              name: "Dr. Alex Johnson",
-              title: "Adaptive Compiler Optimization",
-              experiment:
-                "A compiler enhancement that leverages reinforcement learning to dynamically tune code optimizations based on hardware performance data.",
-              interestingness: 8,
-              feasibility: 2,
-              novelty: 7.8,
-              novel: true,
-              code: ["compiler_opt.py", "reinforcement_model.py"],
-              paper: "/papers/adaptive_compiler.pdf",
-              category: "Compiler Design",
-              date: "2 days ago",
-            },
-            {
-              id: 2,
-              name: "Dr. Sarah Chen",
-              title: "Code Refactoring AI",
-              experiment:
-                "An AI tool that progressively suggests code refactoring steps by analyzing performance bottlenecks, ensuring minimal manual intervention.",
-              interestingness: 7,
-              feasibility: 8,
-              novelty: 4.5,
-              novel: true,
-              code: ["refactor_ai.py", "code_analyzer.py"],
-              paper: "",
-              category: "Software Engineering",
-              date: "1 week ago",
-            },
-            {
-              id: 3,
-              name: "Dr. Michael Rodriguez",
-              title: "Quantum Code Accelerators",
-              experiment:
-                "A framework for automatically identifying code segments that can benefit from quantum acceleration and generating the necessary quantum circuits.",
-              interestingness: 9,
-              feasibility: 6.6,
-              novelty: 2,
-              novel: true,
-              code: ["quantum_accelerator.py"],
-              paper: "/papers/quantum_acceleration.pdf",
-              category: "Quantum Computing",
-              date: "2 weeks ago",
-            },
-          ],
+        // This would be replaced with an actual API call in production
+        // Use actual authenticated user data
+        if (user) {
+          const userData: UserData = {
+            personalInformation: [
+              {
+                id: 1,
+                name: user.username || user.full_name || user.email,
+                email: user.email,
+                role: "Researcher",
+                institution: "Research Institution",
+                joinDate: new Date().toISOString(),
+              },
+            ],
+            researchIdeas: [
+              {
+                id: 1,
+                name: user.username || user.full_name || user.email,
+                title: "Adaptive Compiler Optimization",
+                experiment:
+                  "A compiler enhancement that leverages reinforcement learning to dynamically tune code optimizations based on hardware performance data.",
+                interestingness: 8,
+                feasibility: 2,
+                novelty: 7.8,
+                novel: true,
+                code: ["compiler_opt.py", "reinforcement_model.py"],
+                paper: "/papers/adaptive_compiler.pdf",
+                category: "Compiler Design",
+                date: "2 days ago",
+              },
+              {
+                id: 2,
+                name: user.username || user.full_name || user.email,
+                title: "Code Refactoring AI",
+                experiment:
+                  "An AI tool that progressively suggests code refactoring steps by analyzing performance bottlenecks, ensuring minimal manual intervention.",
+                interestingness: 7,
+                feasibility: 8,
+                novelty: 4.5,
+                novel: true,
+                code: ["refactor_ai.py", "code_analyzer.py"],
+                paper: "",
+                category: "Software Engineering",
+                date: "1 week ago",
+              },
+              {
+                id: 3,
+                name: user.username || user.full_name || user.email,
+                title: "Quantum Code Accelerators",
+                experiment:
+                  "A framework for automatically identifying code segments that can benefit from quantum acceleration and generating the necessary quantum circuits.",
+                interestingness: 9,
+                feasibility: 6.6,
+                novelty: 2,
+                novel: true,
+                code: ["quantum_accelerator.py"],
+                paper: "/papers/quantum_acceleration.pdf",
+                category: "Quantum Computing",
+                date: "2 weeks ago",
+              },
+            ],
+          }
+          setUserData(userData)
         }
-
-        setUserData(mockData)
       } catch (error) {
-        console.error("Error fetching user data:", error)
+        console.error("Error setting user data:", error)
       } finally {
         setIsLoading(false)
       }
     }
 
     fetchUserData()
-  }, [isAuthenticated, router])
+  }, [isAuthenticated, user, router])
 
   // Get user information
-  const userName = userData?.personalInformation[0]?.name || null
-  const userInitial = userName ? userName.charAt(0) : null
+  const userName = user?.username || user?.full_name || user?.email || "Guest"
+  const userInitial = userName.charAt(0)
 
-  // Only render this page if we're actually on the userprofile route and user is authenticated
-  if (pathname !== "/userprofile" || !isAuthenticated) {
+  // Only render this page if we're actually on the userprofile route
+  if (pathname !== "/userprofile") {
     return null
   }
 
