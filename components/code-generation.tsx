@@ -166,13 +166,7 @@ export default function CodeGeneration({ ideaId }: { ideaId?: string | number })
 
   const handleGenerateFromScratch = () => {
     // Open the modal when this method is called
-    if (!uploadedFile) {
-      setError({
-        message: "Please upload a base file before generating code.",
-        type: "upload",
-      })
-      return
-    }
+    
 
     console.log("Experiment")
     console.log(experiment)
