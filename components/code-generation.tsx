@@ -17,6 +17,8 @@ export default function CodeGeneration({ ideaId }: { ideaId?: string | number })
   const apiEndpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const [generatingMode, setGeneratingMode] = useState<string | null>(null)
+
 
   // Handle file upload
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -89,12 +91,14 @@ export default function CodeGeneration({ ideaId }: { ideaId?: string | number })
     console.log(experiment)
 
     if (!experiment.trim()) {
+      console.log("empty experiment")
       setError({
         message: "No research idea found. Please generate a research idea first.",
         type: "experiment",
       })
       return
     }
+    console.log("hererere")
 
     // Check if user is logged in
     const isLoggedIn = localStorage.getItem("isLoggedIn")
@@ -107,6 +111,7 @@ export default function CodeGeneration({ ideaId }: { ideaId?: string | number })
 
     setError(null)
     setIsGenerating(true)
+    setGeneratingMode("upload")
 
     // Store generation type in localStorage
     localStorage.setItem("codeGenerationType", "fromFile")
@@ -161,12 +166,31 @@ export default function CodeGeneration({ ideaId }: { ideaId?: string | number })
 
   const handleGenerateFromScratch = () => {
     // Open the modal when this method is called
+    if (!uploadedFile) {
+      setError({
+        message: "Please upload a base file before generating code.",
+        type: "upload",
+      })
+      return
+    }
+
+    console.log("Experiment")
+    console.log(experiment)
+
+    if (!experiment.trim()) {
+      setError({
+        message: "No research idea found. Please generate a research idea first.",
+        type: "experiment",
+      })
+      return
+    }
     console.log("** handleGenerateFromScratch starts **")
 
     try {
       console.log("Experiment")
       console.log(experiment)
       setIsGenerating(true)
+      setGeneratingMode("scratch")
       generateCode(null, experiment)
 
   
@@ -197,10 +221,33 @@ export default function CodeGeneration({ ideaId }: { ideaId?: string | number })
       {/* Main Content */}
       <div className="space-y-8">
         {/* Upload Button */}
-        <div className="flex justify-center">
+        
+        <div className="flex flex-col items-center justify-center space-y-3">
+
+          {!experiment.trim() && (
+              <div className="mt-2 text-amber-600 text-sm flex items-center">
+                <svg className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 9V11M12 15H12.01M5.07183 19H18.9282C20.4678 19 21.4301 17.3333 20.6603 16L13.7321 4C12.9623 2.66667 11.0378 2.66667 10.268 4L3.33978 16C2.56998 17.3333 3.53223 19 5.07183 19Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <span>No research idea found. Please generate a research idea first</span>
+              </div>
+            )}
+          
           <button
             onClick={() => setShowUploadModal(true)}
-            className="px-6 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+            className="px-6 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors disabled:cursor-not-allowed"
+            disabled={!experiment.trim()}
+              title={
+                !experiment.trim()
+                    ? "No research idea found"
+                    : "Generate code based on your file"
+              }
           >
             PROVIDE THE BASE CODE TEMPLATE
           </button>
@@ -268,7 +315,7 @@ export default function CodeGeneration({ ideaId }: { ideaId?: string | number })
                   Cancel
                 </button>
                 <button
-                  className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+                  className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 disabled:cursor-not-allowed"
                   onClick={() => setShowUploadModal(false)}
                   disabled={!uploadedFile}
                 >
@@ -326,7 +373,7 @@ export default function CodeGeneration({ ideaId }: { ideaId?: string | number })
                     : "Generate code based on your file"
               }
             >
-              {isGenerating ? (
+              {isGenerating && generatingMode == "upload" ? (
                 <>
                   <div className="animate-spin mr-2 h-5 w-5 border-t-2 border-b-2 border-white rounded-full"></div>
                   <span>GENERATING...</span>
@@ -384,7 +431,7 @@ export default function CodeGeneration({ ideaId }: { ideaId?: string | number })
         )}
 
         {/* Error Message */}
-        {error && error.type === "general" && (
+        {error  && (
           <div className="flex items-center justify-center text-red-500 text-sm">
             <span>{error.message}</span>
           </div>
@@ -400,14 +447,18 @@ export default function CodeGeneration({ ideaId }: { ideaId?: string | number })
         {/* Generate From Scratch Button */}
         <div className="flex flex-col items-center">
           <button
-            className={`px-8 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-md font-medium transition-colors flex items-center justify-center ${
-              isGenerating ? "opacity-70 cursor-not-allowed" : ""
+            className={`px-8 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-md font-medium transition-colors flex items-center justify-center disabled:cursor-not-allowed ${
+              (isGenerating || !experiment.trim()) ? "opacity-70 disabled:cursor-not-allowed" : ""
             }`}
             onClick={handleGenerateFromScratch}
-            disabled={isGenerating}
-            title="Generate code from scratch"
+            disabled={!experiment.trim() || isGenerating}
+            title={
+              !experiment.trim()
+              ? "No research idea found"
+              : "Generate code based on your file"
+            }
           >
-            {isGenerating ? (
+            {isGenerating && generatingMode == "scratch" ? (
               <>
                 <div className="animate-spin mr-2 h-5 w-5 border-t-2 border-b-2 border-white rounded-full"></div>
                 <span>GENERATING...</span>
