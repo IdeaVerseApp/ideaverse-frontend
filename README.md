@@ -9,7 +9,7 @@ IdeaVerse is a research idea generation platform that allows users to create, ma
 - **Code Generation**: Automatically generate code based on the uploaded files or research ideas.
     - **Code Upload**: Upload base code files in supported formats (.py, .ipynb).
     - **Code Generation From Scratch**: Generate whole code from scratch based on the given prompt/idea.
-    - **Results Display**: View generated code and execution results in a structured format (json).
+    - **Results Display**: View generated code and execution results (separately run in our docker environment) in a structured format (json).
 - **Research Paper Generation**: Generate the whole research paper in proper formats
 - **User Authentication**: Secure login to access personalized features.
 
@@ -59,15 +59,18 @@ OR
 ## Project Directory Overview
 
 The project directory is structured as follows:
-/ideaverse
-├── /app            # Main application pages and routes
-├── /components     # Reusable React components
-├── /context        # Context API for state management
-├── /pages          # Next.js pages for routing
-├── /public         # Static files like images and icons
-├── /styles         # Global styles and CSS modules
-├── /utils          # Utility functions and helpers
-├── .env            # Environment variables
-├── package.json    # Project metadata and dependencies
-├── README.md       # Project documentation
-└── next.config.js  # Next.js configuration file
+
+```
+ideaverse/
+├── app/             # Main application pages and routes
+├── components/      # Reusable React components
+├── context/         # Context API for state management
+├── pages/           # Next.js pages for routing
+├── public/          # Static files like images and icons
+├── styles/          # Global styles and CSS modules
+├── utils/           # Utility functions and helpers
+├── .env             # Environment variables
+├── package.json     # Project metadata and dependencies
+├── README.md        # Project documentation
+└── next.config.js   # Next.js configuration file
+```
