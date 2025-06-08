@@ -10,13 +10,13 @@ import { ArrowRight, Sparkles, Brain, Lightbulb, FileText, Code, ChevronDown, Mo
 const customAnimations = `
 @keyframes text-shadow-pulse {
   0% {
-    text-shadow: 0 0 2px rgba(59, 130, 246, 0.1);
+    text-shadow: 0 0 1px rgba(59, 130, 246, 0.05);
   }
   50% {
-    text-shadow: 0 0 8px rgba(59, 130, 246, 0.2), 0 0 15px rgba(99, 102, 241, 0.1);
+    text-shadow: 0 0 4px rgba(59, 130, 246, 0.1), 0 0 8px rgba(99, 102, 241, 0.05);
   }
   100% {
-    text-shadow: 0 0 2px rgba(59, 130, 246, 0.1);
+    text-shadow: 0 0 1px rgba(59, 130, 246, 0.05);
   }
 }
 
@@ -207,7 +207,7 @@ const TypeWriter = () => {
       )}
       
       <span 
-        className={`relative font-mono text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 dark:from-blue-400 dark:via-indigo-300 dark:to-purple-400 font-bold tracking-wide drop-shadow-[0_0_5px_rgba(59,130,246,0.2)] dark:drop-shadow-[0_0_5px_rgba(147,197,253,0.2)] ${textEffect === "text-shadow-pulse" ? "animate-text-shadow-pulse" : ""} ${textEffect === "scale-in" ? "animate-scale-in" : ""}`}
+        className={`relative font-mono text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 dark:from-blue-400 dark:via-indigo-300 dark:to-purple-400 font-bold tracking-wide drop-shadow-[0_0_2px_rgba(59,130,246,0.1)] dark:drop-shadow-[0_0_2px_rgba(147,197,253,0.1)] ${textEffect === "text-shadow-pulse" ? "animate-text-shadow-pulse" : ""} ${textEffect === "scale-in" ? "animate-scale-in" : ""}`}
       >
         {displayText}
       </span>
@@ -240,6 +240,7 @@ const FeatureCard = ({ icon: Icon, title, description }: { icon: any, title: str
 export default function LandingPage() {
   const router = useRouter()
   const heroRef = useRef<HTMLDivElement>(null)
+  const [currentYear, setCurrentYear] = useState('2024')
   
   // Initialize theme based on localStorage or system preference
   useEffect(() => {
@@ -252,6 +253,10 @@ export default function LandingPage() {
     } else {
       document.documentElement.classList.remove('dark')
     }
+  }, [])
+  
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear().toString())
   }, [])
   
   // Parallax scrolling effect
@@ -358,8 +363,8 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-white to-purple-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 pointer-events-none"></div>
           
           {/* Glow elements */}
-          <div className="absolute -left-40 top-40 w-96 h-96 rounded-full bg-blue-200/40 blur-3xl dark:bg-blue-900/20 pointer-events-none"></div>
-          <div className="absolute right-0 top-20 w-80 h-80 rounded-full bg-purple-200/40 blur-3xl dark:bg-purple-900/20 pointer-events-none"></div>
+          <div className="absolute -left-40 top-40 w-96 h-96 rounded-full bg-blue-200/30 blur-3xl dark:bg-blue-900/10 pointer-events-none opacity-60"></div>
+          <div className="absolute right-0 top-20 w-80 h-80 rounded-full bg-purple-200/30 blur-3xl dark:bg-purple-900/10 pointer-events-none opacity-60"></div>
           
           {/* Grid pattern overlay */}
           <div className="absolute inset-0 bg-grid-pattern opacity-10 dark:opacity-10 pointer-events-none"></div>
@@ -374,37 +379,71 @@ export default function LandingPage() {
           <div className="flex flex-col lg:flex-row items-center">
             {/* Left side - Text content */}
             <div className="lg:w-1/2 text-center lg:text-left mb-8 lg:mb-0">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
-                Revolutionize Your <br/>
-                Research with <span className="text-blue-600 dark:text-blue-400 relative">
-                  AI
-                  <span className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-purple-400/20 blur-sm -z-10 rounded"></span>
+              <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-8 leading-[1.1] tracking-tight relative z-10">
+                {/* Floating elements - reduced number and opacity */}
+                <div className="absolute -top-8 -left-4 w-3 h-3 rounded-full bg-blue-400/20 dark:bg-blue-400/20 animate-float-medium"></div>
+                <div className="absolute -bottom-6 left-1/4 w-4 h-4 rounded-sm bg-indigo-400/10 dark:bg-indigo-400/10 animate-float-fast transform rotate-12" style={{ animationDelay: '0.5s' }}></div>
+                
+                <span className="relative inline-block">
+                  <span className="absolute -inset-1 -skew-y-2 bg-blue-500/5 dark:bg-blue-500/10 blur-lg rounded-lg transform -rotate-1"></span>
+                  Your 
+                </span>{" "}
+                <span className="relative inline-block">
+                  <span className="absolute -inset-1 bg-gradient-to-r from-blue-600/10 to-purple-600/10 dark:from-blue-400/10 dark:to-purple-400/10 blur-lg rounded-lg"></span>
+                  <span className="relative bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 dark:from-blue-400 dark:via-indigo-300 dark:to-purple-400 animate-text-shadow-pulse">
+                    AI Lab
+                  </span>
+                </span>{" "}
+                <span className="relative inline-block">
+                  <span className="absolute -inset-1 -skew-y-2 bg-blue-500/5 dark:bg-blue-500/10 blur-lg rounded-lg transform rotate-1"></span>
+                  for Research
                 </span>
+                <div className="absolute -z-10 left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-20 bg-gradient-to-r from-blue-500/3 via-indigo-500/3 to-purple-500/3 dark:from-blue-400/5 dark:via-indigo-400/5 dark:to-purple-400/5 blur-lg rounded-full"></div>
               </h1>
               
-              <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-6">
-                <span className="font-medium">I want to </span><TypeWriter />
+              <p className="text-xl md:text-2xl text-gray-700 dark:text-gray-200 mb-8 relative font-light">
+                <span className="font-medium">I want to </span>
+                <TypeWriter />
+                <span className="absolute -left-3 top-1/2 transform -translate-y-1/2 w-1 h-1 rounded-full bg-blue-400/50 dark:bg-blue-400/50 animate-pulse-gentle"></span>
+                <span className="absolute -right-3 top-1/2 transform -translate-y-1/2 w-1 h-1 rounded-full bg-purple-400/50 dark:bg-purple-400/50 animate-pulse-gentle" style={{ animationDelay: '0.7s' }}></span>
               </p>
               
-              <p className="text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-xl mx-auto lg:mx-0">
-                IdeaVerse leverages AI to help researchers generate novel ideas, 
-                create research papers, and implement code - all in one platform.
-              </p>
+              <div className="text-base md:text-lg font-medium mb-10 max-w-2xl lg:mx-0 flex flex-wrap items-center justify-center lg:justify-start gap-4 text-gray-500 dark:text-gray-400">
+                <span className="flex items-center gap-2">
+                  <Brain className="w-5 h-5 text-blue-500" />
+                  <span>Explore Ideas</span>
+                </span>
+                <span className="mx-1 text-slate-300 font-normal hidden md:block">•</span>
+                <span className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-500" />
+                  <span>Generate Papers</span>
+                </span>
+                <span className="mx-1 text-slate-300 font-normal hidden md:block">•</span>
+                <span className="flex items-center gap-2">
+                  <Code className="w-5 h-5 text-blue-500" />
+                  <span>Run Experiments</span>
+                </span>
+              </div>
               
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start space-y-4 sm:space-y-0 sm:space-x-4">
                 <Link 
                   href="/signup" 
-                  className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 border border-transparent rounded-md shadow-md text-base font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900"
+                  className="group w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 border border-transparent rounded-lg text-base font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 dark:hover:from-blue-600 dark:hover:to-indigo-600 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900 shadow-md hover:shadow-lg"
                 >
-                  Get started free
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <span>Get started free</span>
+                  <span className="ml-2 w-6 h-6 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-all duration-300">
+                    <ArrowRight className="h-3.5 w-3.5 text-white" />
+                  </span>
                 </Link>
                 
                 <Link 
                   href="#demo"
-                  className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-base font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900"
+                  className="group w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 border border-gray-200 dark:border-gray-700 rounded-lg text-base font-medium text-gray-800 dark:text-gray-200 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-700/90 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900 shadow-sm hover:shadow-md"
                 >
-                  See demo
+                  <span>See demo</span>
+                  <span className="ml-2 opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300">
+                    <ChevronDown className="h-4 w-4 rotate-90" />
+                  </span>
                 </Link>
               </div>
             </div>
@@ -413,7 +452,7 @@ export default function LandingPage() {
             <div className="lg:w-1/2 lg:pl-8" ref={heroRef}>
               <div className="relative max-w-lg mx-auto">
                 {/* Glowing background effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-600/20 rounded-xl blur-xl opacity-70 dark:opacity-50 transform rotate-2"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-600/10 rounded-xl blur-xl opacity-50 dark:opacity-30 transform rotate-1"></div>
                 
                 {/* AI Assistant Interface */}
                 <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -1002,7 +1041,7 @@ export default function LandingPage() {
       </section>
       
       {/* Call to Action */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700 text-white relative overflow-hidden">
+      <section className="py-32 bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700 text-white relative overflow-hidden">
         {/* Minimalist CTA background */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <svg className="absolute bottom-0 left-0 w-full h-20 text-white/5" preserveAspectRatio="none" viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg">
@@ -1015,22 +1054,114 @@ export default function LandingPage() {
         </div>
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold mb-6">Ready to revolutionize your research workflow?</h2>
-          <p className="text-xl text-blue-100 dark:text-blue-200 mb-8 max-w-3xl mx-auto">
-            Join thousands of researchers who are already using IdeaVerse to accelerate their discoveries and innovations.
-          </p>
-          
-          <Link 
-            href="/signup" 
-            className="inline-flex items-center px-8 py-3 border border-transparent rounded-md shadow-md text-base font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900"
-          >
-            Get started free
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Link>
+          <h2 className="text-4xl font-bold mb-8 text-white relative z-10">
+            <span className="relative inline-block">
+              <span className="absolute -inset-1 -skew-y-3 bg-white/10 blur-xl rounded-lg transform -rotate-1"></span>
+              Your 
+            </span>{" "}
+            <span className="relative inline-block">
+              <span className="absolute -inset-1 bg-gradient-to-r from-blue-300/20 to-purple-300/20 blur-lg rounded-lg"></span>
+              <span className="relative bg-clip-text text-transparent bg-gradient-to-r from-blue-300 via-indigo-200 to-purple-300 animate-text-shadow-pulse">
+                AI Lab
+              </span>
+            </span>{" "}
+            <span className="relative inline-block">
+              <span className="absolute -inset-1 -skew-y-3 bg-white/10 blur-xl rounded-lg transform rotate-1"></span>
+              for Research
+            </span>
+            <div className="absolute -z-10 left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-24 bg-gradient-to-r from-white/5 via-blue-200/5 to-white/5 blur-3xl rounded-full"></div>
+          </h2>
+          <div className="flex justify-center space-x-8 mb-12 text-lg">
+            <span>Explore Ideas</span>
+            <span>|</span>
+            <span>Generate Papers</span>
+            <span>|</span>
+            <span>Run Experiments</span>
+          </div>
+          <div className="flex justify-center space-x-6">
+            <Link 
+              href="/signup" 
+              className="inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50 transition-colors duration-200"
+            >
+              Get started free
+            </Link>
+            <Link 
+              href="/demo" 
+              className="inline-flex items-center px-8 py-3 border border-white text-base font-medium rounded-md text-white hover:bg-white/10 transition-colors duration-200"
+            >
+              See demo
+            </Link>
+          </div>
         </div>
       </section>
 
-        {/* Footer */}
+      {/* Team Section */}
+      <section className="py-16 relative overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white to-blue-50 dark:from-gray-900 dark:to-blue-900/20 opacity-80"></div>
+          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-white to-indigo-50 dark:from-gray-900 dark:to-indigo-900/20 opacity-80"></div>
+          <div className="absolute animate-pulse-glow opacity-30 top-20 -left-24 w-72 h-72 bg-blue-200 dark:bg-blue-900/40 rounded-full blur-3xl"></div>
+          <div className="absolute animate-float-subtle opacity-20 bottom-20 -right-24 w-72 h-72 bg-indigo-200 dark:bg-indigo-900/40 rounded-full blur-3xl"></div>
+          <svg className="absolute opacity-5 dark:opacity-[0.02] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" width="800" height="400" viewBox="0 0 800 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="400" cy="200" r="150" stroke="currentColor" strokeWidth="2" strokeDasharray="8 8" />
+            <circle cx="400" cy="200" r="100" stroke="currentColor" strokeWidth="2" strokeDasharray="6 6" />
+          </svg>
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Meet the Team</h2>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">The minds behind IdeaVerse</p>
+            <div className="mt-2">
+              <Link href="/about" className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center">
+                Learn more about us <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+            {/* Dhruv Kumar */}
+            <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 shadow-md flex items-center space-x-4 transition-all duration-300 hover:shadow-lg hover:shadow-blue-100 dark:hover:shadow-blue-900/20 transform hover:-translate-y-1 border border-blue-50 dark:border-blue-900/30">
+              <div className="flex-shrink-0">
+                <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-blue-200 dark:border-blue-700">
+                  <Image 
+                    src="/Dhruv Kumar.jpeg" 
+                    alt="Dhruv Kumar" 
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Dhruv Kumar</h3>
+                <p className="text-sm text-blue-600 dark:text-blue-400">GenAI Scientist & Professor</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Research in GenAI @ BITS Pilani</p>
+              </div>
+            </div>
+            
+            {/* Rohit Singhee */}
+            <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 shadow-md flex items-center space-x-4 transition-all duration-300 hover:shadow-lg hover:shadow-blue-100 dark:hover:shadow-blue-900/20 transform hover:-translate-y-1 border border-blue-50 dark:border-blue-900/30">
+              <div className="flex-shrink-0">
+                <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-blue-200 dark:border-blue-700">
+                  <Image 
+                    src="/Rohit Singhee.jpeg" 
+                    alt="Rohit Singhee" 
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Rohit Singhee</h3>
+                <p className="text-sm text-blue-600 dark:text-blue-400">ME CS Student & GenAI Researcher</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">AI Dev, Microservices & Backend</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
       <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
@@ -1075,7 +1206,7 @@ export default function LandingPage() {
             <div>
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">Company</h3>
               <ul className="space-y-2">
-                <li><Link href="#" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">About</Link></li>
+                <li><Link href="/about" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">About</Link></li>
                 <li><Link href="#" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">Blog</Link></li>
                 <li><Link href="#" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">Careers</Link></li>
                 <li><Link href="#" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">Contact</Link></li>
@@ -1094,7 +1225,7 @@ export default function LandingPage() {
 
           <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-500 dark:text-gray-400 text-sm">
-              © {new Date().getFullYear()} IdeaVerse. All rights reserved.
+              © {currentYear} IdeaVerse. All rights reserved.
             </p>
             
             <div className="flex space-x-6 mt-4 md:mt-0">

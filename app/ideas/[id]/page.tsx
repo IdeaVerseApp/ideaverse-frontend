@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useState, use } from "react"
-import { useRouter } from "next/navigation"
-import { Loader2, ArrowLeft, Download } from "lucide-react"
+import { useRouter, useParams } from "next/navigation"
+import { Loader2, ArrowLeft, Download, BookOpen, RefreshCw, ExternalLink, ChevronDown, ChevronRight } from "lucide-react"
 import Footer from "@/components/footer"
 import Navbar from "@/components/navbar"
 import Sidebar from "@/components/sidebar"
@@ -13,6 +13,7 @@ import React from "react"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { useIdea } from "@/context/IdeaContext"
 import LitMapDiagram from "@/components/LitMapDiagram"
+import { getIdea } from "@/services/idea-service"
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -69,13 +70,25 @@ interface IdeaDetail {
   error?: string
   similar_papers?: SimilarPaper[]  // Added similar papers
   created_at?: string
+  follow_up_questions?: FollowUpQuestion[]
+  follow_up_answers?: FollowUpAnswer[]
 }
 
-export default function IdeaDetailPage({ params }: { params: { id: string } }) {
-  // Unwrap params at component level
-  const id = params.id;
+interface FollowUpQuestion {
+  id: string
+  question: string
+  context?: string
+}
 
+interface FollowUpAnswer {
+  question_id: string
+  answer: string
+}
+
+export default function IdeaDetailPage() {
   const router = useRouter()
+  const params = useParams()
+  const ideaId = params.id as string
   const { token, isAuthenticated, loading: authLoading, refreshAuthState, user } = useAuth()
   const [userData, setUserData] = useState<UserData | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -83,7 +96,19 @@ export default function IdeaDetailPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [eventSource, setEventSource] = useState<EventSource | null>(null)
-  const { experiment } = useIdea();
+  const { experiment, setExperiment } = useIdea()
+  const [activeTabIndex, setActiveTabIndex] = useState(0)
+  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null)
+  const [isPolling, setIsPolling] = useState(false)
+  const [expandedIdeas, setExpandedIdeas] = useState<Record<number, boolean>>({})
+
+  // Toggle the expanded state of an idea
+  const toggleIdeaExpand = (index: number) => {
+    setExpandedIdeas(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }))
+  }
 
   // Fetch user data
   useEffect(() => {
@@ -138,7 +163,7 @@ export default function IdeaDetailPage({ params }: { params: { id: string } }) {
   // Fetch idea details and set up SSE
   useEffect(() => {
     const fetchIdeaDetails = async () => {
-      if (!id || authLoading) return;
+      if (!ideaId || authLoading) return;
       
       if (!isAuthenticated || !token) {
         // Don't try to fetch if not authenticated
@@ -147,10 +172,10 @@ export default function IdeaDetailPage({ params }: { params: { id: string } }) {
       
       setLoading(true);
       try {
-        console.log(`Fetching idea from: ${API_URL}/ideas/${id}`);
+        console.log(`Fetching idea from: ${API_URL}/ideas/${ideaId}`);
         
         // Fetch initial idea details using the id from URL params
-        const response = await axios.get(`${API_URL}/ideas/${id}`, {
+        const response = await axios.get(`${API_URL}/ideas/${ideaId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -162,7 +187,7 @@ export default function IdeaDetailPage({ params }: { params: { id: string } }) {
 
         // If the task is still in progress, set up SSE connection
         if (response.data.status === "PENDING" || response.data.status === "PROCESSING") {
-          const sse = new EventSource(`${API_URL}/ideas/events/${id}`);
+          const sse = new EventSource(`${API_URL}/ideas/events/${ideaId}`);
           
           sse.onmessage = (event) => {
             const data = JSON.parse(event.data);
@@ -185,8 +210,8 @@ export default function IdeaDetailPage({ params }: { params: { id: string } }) {
         const error = err as any;
         
         if (error.response?.status === 404) {
-          console.error("Endpoint not found. URL:", `${API_URL}/ideas/${id}`);
-          setError(`Idea not found. The requested idea may have been deleted or doesn't exist. (ID: ${id})`);
+          console.error("Endpoint not found. URL:", `${API_URL}/ideas/${ideaId}`);
+          setError(`Idea not found. The requested idea may have been deleted or doesn't exist. (ID: ${ideaId})`);
         } else if (error.response?.status === 401) {
           // Handle 401 errors by trying to refresh auth
           try {
@@ -210,7 +235,18 @@ export default function IdeaDetailPage({ params }: { params: { id: string } }) {
         eventSource.close();
       }
     };
-  }, [id, token, isAuthenticated, authLoading, refreshAuthState]);
+  }, [ideaId, token, isAuthenticated, authLoading, refreshAuthState]);
+
+  // When we navigate away, save the current idea description to context
+  useEffect(() => {
+    if (idea?.task_description) {
+      setExperiment(idea.task_description)
+    }
+    
+    return () => {
+      // Cleanup if needed
+    }
+  }, [idea, setExperiment])
 
   // Get user information
   const userName = userData?.personalInformation[0]?.name || "Researcher"
@@ -286,6 +322,18 @@ export default function IdeaDetailPage({ params }: { params: { id: string } }) {
     doc.text(`Task ID: ${idea.task_id}`, margin, yOffset);
     yOffset += 16;
     addHorizontalLine();
+
+    // Header with title and status
+    <div className="mb-6 flex items-center justify-between">
+      <h1 className="text-2xl font-bold text-foreground">Research Idea</h1>
+      <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+        ${idea.status === "completed" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : 
+          idea.status === "PENDING" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300" : 
+          idea.status === "PROCESSING" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300" :
+          "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}`}>
+        {idea.status}
+      </div>
+    </div>
 
     // Seed Idea
     addSectionTitle('Seed Idea / Task Description');
@@ -387,12 +435,12 @@ export default function IdeaDetailPage({ params }: { params: { id: string } }) {
 
   // Update the debug section to use id instead of ideaId
   useEffect(() => {
-    if (id) {
-      console.log("Debug - Current idea ID:", id);
+    if (ideaId) {
+      console.log("Debug - Current idea ID:", ideaId);
       console.log("Debug - API URL:", API_URL);
-      console.log("Debug - Full API endpoint:", `${API_URL}/ideas/${id}`);
+      console.log("Debug - Full API endpoint:", `${API_URL}/ideas/${ideaId}`);
     }
-  }, [id]);
+  }, [ideaId]);
 
   // Helper for elapsed time
   function getElapsedTime(createdAt?: string) {
@@ -420,6 +468,22 @@ export default function IdeaDetailPage({ params }: { params: { id: string } }) {
     }
     // Default
     return "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
+  }
+
+  // Match follow-up answers with their questions
+  const getFollowUpQuestionsWithAnswers = () => {
+    if (!idea || !idea.follow_up_questions || !idea.follow_up_answers) return []
+    
+    return idea.follow_up_questions.map((question: FollowUpQuestion) => {
+      const answer = idea.follow_up_answers.find(
+        (a: FollowUpAnswer) => a.question_id === question.id
+      )
+      
+      return {
+        ...question,
+        answer: answer ? answer.answer : null
+      }
+    })
   }
 
   if (loading || authLoading) {
@@ -533,7 +597,7 @@ export default function IdeaDetailPage({ params }: { params: { id: string } }) {
   // Main content rendering when idea is available
   return (
     <ProtectedRoute>
-      <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
+      <div className="flex min-h-screen bg-background dark:bg-background">
         <Sidebar
           userName={userName}
           userInitial={userInitial}
@@ -548,12 +612,12 @@ export default function IdeaDetailPage({ params }: { params: { id: string } }) {
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
           />
-          <main className="flex-1 p-4 sm:p-6 bg-gray-100 dark:bg-gray-900">
+          <main className="flex-1 p-4 sm:p-6 bg-background dark:bg-background">
             <div className="max-w-5xl mx-auto">
               <div className="flex justify-between items-center mb-6 gap-2">
                 <button
                   onClick={handleBackClick}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="inline-flex items-center px-4 py-2 border border-border dark:border-border text-sm font-medium rounded-md shadow-sm text-foreground dark:text-foreground bg-card dark:bg-card hover:bg-accent dark:hover:bg-accent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                 >
                   <ArrowLeft className="mr-2 h-5 w-5" />
                   Back
@@ -562,8 +626,8 @@ export default function IdeaDetailPage({ params }: { params: { id: string } }) {
 
               { idea ? (
               <div className="bg-card dark:bg-card border border-border rounded-lg p-6 shadow-sm">
-                <div className="mb-6">
-                  <h1 className="text-2xl font-bold text-foreground mb-2">Research Idea</h1>
+                <div className="mb-6 flex items-center justify-between">
+                  <h1 className="text-2xl font-bold text-foreground">Research Idea</h1>
                   <div className="flex items-center gap-2">
                     <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
                       ${idea.status === "completed" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : 
@@ -585,9 +649,9 @@ export default function IdeaDetailPage({ params }: { params: { id: string } }) {
                 </div>
 
                 {/* Seed Idea Display */}
-                <div className="mb-6">
+                <div className="mb-6 flex flex-col items-start">
                   <h2 className="text-sm font-semibold text-card-foreground mb-1 uppercase tracking-wider">Seed Idea</h2>
-                  <div className="bg-muted dark:bg-gray-800 px-4 py-3 rounded-lg text-sm text-muted-foreground whitespace-pre-line break-words max-w-3xl shadow-sm">
+                  <div className="bg-muted dark:bg-gray-800 px-4 py-3 rounded-lg text-sm text-muted-foreground whitespace-pre-line break-words max-w-md shadow-sm">
                     {idea.task_description || experiment}
                   </div>
                 </div>
@@ -595,179 +659,204 @@ export default function IdeaDetailPage({ params }: { params: { id: string } }) {
                 <div className="mb-4">
                   <h2 className="text-lg font-medium text-card-foreground mb-2">Generated Ideas</h2>
                   {idea.ideas && idea.ideas.length > 0 ? (
-                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden mb-6">
+                    <div className="space-y-4">
                       {idea.ideas.map((ideaItem, index) => (
-                        <div key={index} className="p-6 border-b border-gray-200 dark:border-gray-700 last:border-0">
-                          <div className="flex items-start mb-3">
-                            <div className="mr-4 flex-shrink-0">
-                              <span className="flex items-center justify-center h-10 w-10 rounded-full bg-indigo-600 text-white text-xl font-bold">
-                                {index + 1}
-                              </span>
-                            </div>
-                            <div className="flex-grow">
-                              <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-1">{ideaItem.Title}</h3>
-                              {ideaItem.Name && (
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1 italic">({ideaItem.Name})</p>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {/* Scores: Interestingness, Feasibility, Novelty */}
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                            {/* Interestingness */}
-                            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 p-4 rounded-lg shadow text-center">
-                              <p className="text-sm font-medium text-blue-600 dark:text-blue-300 mb-1">Interestingness</p>
-                              <p className="text-4xl font-bold text-blue-700 dark:text-blue-200">{ideaItem.Interestingness}</p>
-                            </div>
-                            {/* Feasibility */}
-                            <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 p-4 rounded-lg shadow text-center">
-                              <p className="text-sm font-medium text-green-600 dark:text-green-300 mb-1">Feasibility</p>
-                              <p className="text-4xl font-bold text-green-700 dark:text-green-200">{ideaItem.Feasibility}</p>
-                            </div>
-                            {/* Novelty */}
-                            <div className="bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700 p-4 rounded-lg shadow text-center">
-                              <p className="text-sm font-medium text-purple-600 dark:text-purple-300 mb-1">Novelty</p>
-                              <p className="text-4xl font-bold text-purple-700 dark:text-purple-200">{ideaItem.Novelty}</p>
-                            </div>
-                          </div>
-                          
-                          {/* Description section */}
-                          {ideaItem.description && (
-                            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 mb-6">
-                              <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Description</h4>
-                              <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap leading-relaxed">{ideaItem.description}</p>
-                            </div>
-                          )}
-
-                          {/* Experiment section */}
-                          {ideaItem.Experiment && (
-                            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 mb-6">
-                              <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Experiment Details</h4>
-                              <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap leading-relaxed">{ideaItem.Experiment}</p>
-                            </div>
-                          )}
-                          
-                          {/* Implementation Steps section */}
-                          {ideaItem.implementation_steps && ideaItem.implementation_steps.length > 0 && (
-                            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 mb-6">
-                              <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Implementation Steps</h4>
-                              <ol className="list-decimal pl-5 space-y-2 text-gray-600 dark:text-gray-400">
-                                {ideaItem.implementation_steps.map((step: string, stepIndex: number) => (
-                                  <li key={stepIndex} className="leading-relaxed">{step}</li>
-                                ))}
-                              </ol>
-                            </div>
-                          )}
-                          
-                          {/* Expected Outcomes section */}
-                          {ideaItem.expected_outcomes && ideaItem.expected_outcomes.length > 0 && (
-                            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 mb-6">
-                              <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Expected Outcomes</h4>
-                              <ul className="list-disc pl-5 space-y-2 text-gray-600 dark:text-gray-400">
-                                {ideaItem.expected_outcomes.map((outcome: string, outcomeIndex: number) => (
-                                  <li key={outcomeIndex} className="leading-relaxed">{outcome}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          
-                          {/* Challenges and Mitigation Strategies */}
-                          {(ideaItem.potential_challenges && ideaItem.potential_challenges.length > 0) || 
-                           (ideaItem.mitigation_strategies && ideaItem.mitigation_strategies.length > 0) ? (
-                            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 mb-6">
-                              <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Challenges & Mitigation</h4>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {ideaItem.potential_challenges && ideaItem.potential_challenges.length > 0 && (
-                                  <div>
-                                    <h5 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">Potential Challenges</h5>
-                                    <ul className="list-disc pl-5 space-y-2 text-gray-600 dark:text-gray-400">
-                                      {ideaItem.potential_challenges.map((challenge: string, challengeIndex: number) => (
-                                        <li key={challengeIndex} className="leading-relaxed">{challenge}</li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
-                                
-                                {ideaItem.mitigation_strategies && ideaItem.mitigation_strategies.length > 0 && (
-                                  <div>
-                                    <h5 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">Mitigation Strategies</h5>
-                                    <ul className="list-disc pl-5 space-y-2 text-gray-600 dark:text-gray-400">
-                                      {ideaItem.mitigation_strategies.map((strategy: string, strategyIndex: number) => (
-                                        <li key={strategyIndex} className="leading-relaxed">{strategy}</li>
-                                      ))}
-                                    </ul>
-                                  </div>
+                        <div key={index} className="bg-card dark:bg-card border border-border dark:border-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                          {/* Compressed idea view - always visible */}
+                          <div 
+                            className="p-5 flex flex-col sm:flex-row sm:items-center gap-4 cursor-pointer hover:bg-accent dark:hover:bg-accent transition-colors"
+                            onClick={() => toggleIdeaExpand(index)}
+                          >
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <div className="flex-shrink-0">
+                                <span className="flex items-center justify-center h-10 w-10 rounded-full bg-primary text-primary-foreground text-lg font-bold shadow-sm">
+                                  {index + 1}
+                                </span>
+                              </div>
+                              <div className="min-w-0">
+                                <h3 className="text-lg font-semibold text-foreground dark:text-foreground break-words">{ideaItem.Title}</h3>
+                                {ideaItem.Name && (
+                                  <p className="text-sm text-muted-foreground dark:text-muted-foreground break-words">{ideaItem.Name.replace(/_/g, ' ')}</p>
                                 )}
                               </div>
                             </div>
-                          ) : null}
+                            
+                            <div className="flex items-center justify-end gap-3 ml-auto">
+                              <div className="flex flex-wrap justify-end gap-2">
+                                <div className="px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-medium flex items-center gap-1.5 shadow-sm">
+                                  <div className="h-2 w-2 rounded-full bg-blue-500 dark:bg-blue-400"></div>
+                                  <span>Interestingness: {ideaItem.Interestingness}</span>
+                                </div>
+                                <div className="px-3 py-1.5 rounded-full bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-sm font-medium flex items-center gap-1.5 shadow-sm">
+                                  <div className="h-2 w-2 rounded-full bg-green-500 dark:bg-green-400"></div>
+                                  <span>Feasibility: {ideaItem.Feasibility}</span>
+                                </div>
+                                <div className="px-3 py-1.5 rounded-full bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm font-medium flex items-center gap-1.5 shadow-sm">
+                                  <div className="h-2 w-2 rounded-full bg-purple-500 dark:bg-purple-400"></div>
+                                  <span>Novelty: {ideaItem.Novelty}</span>
+                                </div>
+                              </div>
+                              <div className="text-gray-400 dark:text-gray-500">
+                                {expandedIdeas[index] ? (
+                                  <ChevronDown className="h-5 w-5" />
+                                ) : (
+                                  <ChevronRight className="h-5 w-5" />
+                                )}
+                              </div>
+                            </div>
+                          </div>
                           
-                          {/* Scientific Merit and Innovation Level */}
-                          {(ideaItem.scientific_merit !== undefined || ideaItem.innovation_level !== undefined) && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                              {ideaItem.scientific_merit !== undefined && (
-                                <div className="bg-gray-100 dark:bg-gray-700/80 p-4 rounded-lg">
-                                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Scientific Merit</p>
-                                  <p className="text-2xl font-bold text-gray-700 dark:text-gray-200">{(ideaItem.scientific_merit * 100).toFixed(0)}%</p>
+                          {/* Expanded idea details */}
+                          {expandedIdeas[index] && (
+                            <div className="p-6 pt-2 bg-muted dark:bg-muted border-t border-border">
+                              {/* Scores: Interestingness, Feasibility, Novelty */}
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                                {/* Interestingness */}
+                                <div className="bg-card dark:bg-card border border-border dark:border-border p-4 rounded-xl shadow-sm text-center">
+                                  <p className="text-sm font-medium text-primary dark:text-primary mb-1">Interestingness</p>
+                                  <p className="text-4xl font-bold text-foreground dark:text-foreground">{ideaItem.Interestingness}</p>
+                                </div>
+                                {/* Feasibility */}
+                                <div className="bg-card dark:bg-card border border-border dark:border-border p-4 rounded-xl shadow-sm text-center">
+                                  <p className="text-sm font-medium text-primary dark:text-primary mb-1">Feasibility</p>
+                                  <p className="text-4xl font-bold text-foreground dark:text-foreground">{ideaItem.Feasibility}</p>
+                                </div>
+                                {/* Novelty */}
+                                <div className="bg-card dark:bg-card border border-border dark:border-border p-4 rounded-xl shadow-sm text-center">
+                                  <p className="text-sm font-medium text-primary dark:text-primary mb-1">Novelty</p>
+                                  <p className="text-4xl font-bold text-foreground dark:text-foreground">{ideaItem.Novelty}</p>
+                                </div>
+                              </div>
+                              
+                              {/* Description section */}
+                              {ideaItem.description && (
+                                <div className="border border-gray-200 dark:border-gray-600 rounded-xl p-5 mb-6 bg-white dark:bg-gray-800/80 shadow-sm">
+                                  <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Description</h4>
+                                  <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap leading-relaxed">{ideaItem.description}</p>
                                 </div>
                               )}
-                              {ideaItem.innovation_level !== undefined && (
-                                <div className="bg-gray-100 dark:bg-gray-700/80 p-4 rounded-lg">
-                                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Innovation Level</p>
-                                  <p className="text-2xl font-bold text-gray-700 dark:text-gray-200">{(ideaItem.innovation_level * 100).toFixed(0)}%</p>
+
+                              {/* Experiment section */}
+                              {ideaItem.Experiment && (
+                                <div className="border border-gray-200 dark:border-gray-600 rounded-xl p-5 mb-6 bg-white dark:bg-gray-800/80 shadow-sm">
+                                  <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Experiment Details</h4>
+                                  <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap leading-relaxed">{ideaItem.Experiment}</p>
                                 </div>
                               )}
-                            </div>
-                          )}
+                              
+                              {/* Implementation Steps section */}
+                              {ideaItem.implementation_steps && ideaItem.implementation_steps.length > 0 && (
+                                <div className="border border-gray-200 dark:border-gray-600 rounded-xl p-5 mb-6 bg-white dark:bg-gray-800/80 shadow-sm">
+                                  <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Implementation Steps</h4>
+                                  <ol className="list-decimal pl-5 space-y-2 text-gray-600 dark:text-gray-400">
+                                    {ideaItem.implementation_steps.map((step: string, stepIndex: number) => (
+                                      <li key={stepIndex} className="leading-relaxed">{step}</li>
+                                    ))}
+                                  </ol>
+                                </div>
+                              )}
+                              
+                              {/* Expected Outcomes section */}
+                              {ideaItem.expected_outcomes && ideaItem.expected_outcomes.length > 0 && (
+                                <div className="border border-gray-200 dark:border-gray-600 rounded-xl p-5 mb-6 bg-white dark:bg-gray-800/80 shadow-sm">
+                                  <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Expected Outcomes</h4>
+                                  <ul className="list-disc pl-5 space-y-2 text-gray-600 dark:text-gray-400">
+                                    {ideaItem.expected_outcomes.map((outcome: string, outcomeIndex: number) => (
+                                      <li key={outcomeIndex} className="leading-relaxed">{outcome}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              
+                              {/* Challenges and Mitigation Strategies */}
+                              {(ideaItem.potential_challenges && ideaItem.potential_challenges.length > 0) || 
+                               (ideaItem.mitigation_strategies && ideaItem.mitigation_strategies.length > 0) ? (
+                                <div className="border border-gray-200 dark:border-gray-600 rounded-xl p-5 mb-6 bg-white dark:bg-gray-800/80 shadow-sm">
+                                  <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Challenges & Mitigation</h4>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {ideaItem.potential_challenges && ideaItem.potential_challenges.length > 0 && (
+                                      <div>
+                                        <h5 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">Potential Challenges</h5>
+                                        <ul className="list-disc pl-5 space-y-2 text-gray-600 dark:text-gray-400">
+                                          {ideaItem.potential_challenges.map((challenge: string, challengeIndex: number) => (
+                                            <li key={challengeIndex} className="leading-relaxed">{challenge}</li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    
+                                    {ideaItem.mitigation_strategies && ideaItem.mitigation_strategies.length > 0 && (
+                                      <div>
+                                        <h5 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">Mitigation Strategies</h5>
+                                        <ul className="list-disc pl-5 space-y-2 text-gray-600 dark:text-gray-400">
+                                          {ideaItem.mitigation_strategies.map((strategy: string, strategyIndex: number) => (
+                                            <li key={strategyIndex} className="leading-relaxed">{strategy}</li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : null}
+                              
+                              {/* Scientific Merit and Innovation Level */}
+                              {(ideaItem.scientific_merit !== undefined || ideaItem.innovation_level !== undefined) && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                                  {ideaItem.scientific_merit !== undefined && (
+                                    <div className="bg-white dark:bg-gray-800/80 border border-gray-200 dark:border-gray-600 p-5 rounded-xl shadow-sm">
+                                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Scientific Merit</p>
+                                      <p className="text-2xl font-bold text-gray-700 dark:text-gray-200">{(ideaItem.scientific_merit * 100).toFixed(0)}%</p>
+                                    </div>
+                                  )}
+                                  {ideaItem.innovation_level !== undefined && (
+                                    <div className="bg-white dark:bg-gray-800/80 border border-gray-200 dark:border-gray-600 p-5 rounded-xl shadow-sm">
+                                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Innovation Level</p>
+                                      <p className="text-2xl font-bold text-gray-700 dark:text-gray-200">{(ideaItem.innovation_level * 100).toFixed(0)}%</p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
 
-                          {/* Thought for this specific idea */}
-                          {ideaItem.thought && (
-                            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 mb-6">
-                              <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Developer&apos;s Thought</h4>
-                              <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap leading-relaxed italic">{ideaItem.thought}</p>
-                            </div>
-                          )}
+                              {/* Thought for this specific idea */}
+                              {ideaItem.thought && (
+                                <div className="border border-gray-200 dark:border-gray-600 rounded-xl p-5 mb-6 bg-white dark:bg-gray-800/80 shadow-sm">
+                                  <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Developer&apos;s Thought</h4>
+                                  <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap leading-relaxed italic">{ideaItem.thought}</p>
+                                </div>
+                              )}
 
-                          {/* Download PDF button just above LitMapDiagram */}
-                          {idea && idea.similar_papers && idea.similar_papers.length > 0 && (
-                            <div className="mb-4 flex justify-end">
-                              <button
-                                onClick={handleDownloadPdf}
-                                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
-                              >
-                                <Download className="mr-2 h-5 w-5" />
-                                Download PDF
-                              </button>
-                            </div>
-                          )}
+                              {/* Download PDF button just above LitMapDiagram */}
+                              {idea && idea.similar_papers && idea.similar_papers.length > 0 && (
+                                <div className="mb-4 flex justify-end">
+                                  <button
+                                    onClick={handleDownloadPdf}
+                                    className="inline-flex items-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-colors"
+                                  >
+                                    <Download className="mr-2 h-5 w-5" />
+                                    Download PDF
+                                  </button>
+                                </div>
+                              )}
 
-                          {/* Literature Map Diagram */}
-                          {idea && idea.similar_papers && idea.similar_papers.length > 0 && (
-                            <div className="mt-6">
-                              <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Literature Context Map</h4>
-                              <LitMapDiagram 
-                                currentIdea={ideaItem} 
-                                similarPapers={idea.similar_papers} 
-                                className="mb-6"
-                              />
+                              {/* Literature Map Diagram */}
+                              {idea && idea.similar_papers && idea.similar_papers.length > 0 && (
+                                <div className="mt-6">
+                                  <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Literature Context Map</h4>
+                                  <LitMapDiagram 
+                                    currentIdea={ideaItem} 
+                                    similarPapers={idea.similar_papers} 
+                                    className="mb-6"
+                                  />
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
                       ))}
                     </div>
-                  ) : (idea.status === "started" || idea.status === "PENDING" || idea.status === "PROCESSING") ? (
-                    <div className="flex flex-col items-center justify-center p-12 bg-card rounded-lg">
-                      <div className="flex items-center mb-4">
-                        <span className="relative flex h-4 w-4 mr-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-4 w-4 bg-red-600"></span>
-                        </span>
-                        <span className="text-lg text-muted-foreground">Generating research ideas...</span>
-                      </div>
-                    </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-12 bg-card rounded-lg">
-                      <p className="text-lg text-muted-foreground mb-4">No ideas generated yet.</p>
+                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
+                      <p className="text-gray-500 dark:text-gray-400">No ideas generated yet.</p>
                     </div>
                   )}
                 </div>
@@ -865,6 +954,50 @@ export default function IdeaDetailPage({ params }: { params: { id: string } }) {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Follow-up Questions and Answers */}
+                {idea.follow_up_questions && idea.follow_up_questions.length > 0 && (
+                  <div className="mt-8 bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                      <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                        Follow-up Questions & Answers
+                      </h2>
+                    </div>
+                    
+                    <div className="p-6">
+                      <ul className="space-y-4">
+                        {getFollowUpQuestionsWithAnswers().map((item: any, index: number) => (
+                          <li key={item.id} className="border-b border-gray-100 dark:border-gray-700 pb-4 last:border-0 last:pb-0">
+                            <div className="flex gap-2">
+                              <span className="font-medium text-gray-700 dark:text-gray-200 min-w-[24px]">
+                                Q{index + 1}:
+                              </span>
+                              <div className="flex-1">
+                                <p className="font-medium text-gray-800 dark:text-gray-200 mb-1">
+                                  {item.question}
+                                </p>
+                                {item.context && (
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 italic">
+                                    {item.context}
+                                  </p>
+                                )}
+                                
+                                {item.answer ? (
+                                  <div className="mt-2 pl-6 border-l-2 border-gray-200 dark:border-gray-700">
+                                    <span className="text-gray-700 dark:text-gray-300 font-medium">A:</span>
+                                    <p className="text-gray-600 dark:text-gray-300 mt-1">{item.answer}</p>
+                                  </div>
+                                ) : (
+                                  <p className="text-gray-400 dark:text-gray-500 italic pl-6 mt-2">No answer provided</p>
+                                )}
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   </div>
                 )}

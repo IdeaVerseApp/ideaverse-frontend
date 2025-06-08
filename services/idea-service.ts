@@ -16,17 +16,30 @@ interface IdeaGenerationTask {
   system_prompt?: string
 }
 
+interface FollowUpQuestion {
+  id: string
+  question: string
+  context?: string
+}
+
+interface FollowUpAnswer {
+  question_id: string
+  answer: string
+}
+
 interface IdeaResponse {
-  _id?: string         // MongoDB ObjectId
-  task_id: string      // UUID
+  task_id: string
   user_id: string
-  task_description: string
   status: string
-  thought: string
-  ideas: any[]
-  reflection_rounds: number
+  task_description: string
+  thought?: string
+  ideas?: any[]
+  reflection_rounds?: number
   error?: string
+  tags?: string[]
   similar_papers?: SimilarPaper[]
+  follow_up_questions?: FollowUpQuestion[]
+  follow_up_answers?: FollowUpAnswer[]
 }
 
 export async function generateIdeaExploration(researchIdea: string): Promise<IdeaExplorationResult> {
@@ -61,30 +74,24 @@ export async function generateIdeaExploration(researchIdea: string): Promise<Ide
         "Start training with simple code and gradually introduce complex algorithms.",
       ],
     },
-    relatedResearch: [
+    similarPapers: [
       {
-        title: "Learning to Optimize: A Reinforcement Learning Approach to Compiler Optimization",
-        link: "arxiv:1806.07896",
-        brief:
-          "This paper presents a reinforcement learning framework that dynamically selects compiler optimizations to improve code performance. The model adapts to different hardware architectures and workloads.",
+        title: "LEAF: A Learning-based Compiler for Fast GPU Code Generation",
+        link: "https://example.com/papers/1",
+        citations: 34,
+        relevance: 0.89,
       },
       {
-        title: "Learning to Optimize: A Reinforcement Learning Approach to Compiler Optimization",
-        link: "arxiv:1806.07896",
-        brief:
-          "This paper presents a reinforcement learning framework that dynamically selects compiler optimizations to improve code performance. The model adapts to different hardware architectures and workloads.",
+        title: "Deep Reinforcement Learning for Compiler Optimization",
+        link: "https://example.com/papers/2",
+        citations: 67,
+        relevance: 0.76,
       },
       {
-        title: "Learning to Optimize: A Reinforcement Learning Approach to Compiler Optimization",
-        link: "arxiv:1806.07896",
-        brief:
-          "This paper presents a reinforcement learning framework that dynamically selects compiler optimizations to improve code performance. The model adapts to different hardware architectures and workloads.",
-      },
-      {
-        title: "Learning to Optimize: A Reinforcement Learning Approach to Compiler Optimization",
-        link: "arxiv:1806.07896",
-        brief:
-          "This paper presents a reinforcement learning framework that dynamically selects compiler optimizations to improve code performance. The model adapts to different hardware architectures and workloads.",
+        title: "AutoTune: Adaptive Compiler Optimizations for Deep Learning",
+        link: "https://example.com/papers/3",
+        citations: 112,
+        relevance: 0.72,
       },
     ],
   }
@@ -120,6 +127,82 @@ export async function generateIdeas(task: IdeaGenerationTask): Promise<IdeaRespo
     return response.data;
   } catch (error) {
     console.error('Error generating ideas:', error);
+    throw error;
+  }
+}
+
+// Function to generate follow-up questions for an idea
+export async function generateFollowUpQuestions(task: IdeaGenerationTask): Promise<IdeaResponse> {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    // Ensure all required fields are set with defaults if not provided
+    const completeTask = {
+      ...task,
+      user_id: task.user_id || "unknown",
+      code: task.code || "",
+      num_ideas: task.num_ideas || 5,
+      num_reflections: task.num_reflections || 2,
+      prev_ideas: task.prev_ideas || [],
+      seed_ideas: task.seed_ideas || []
+    };
+
+    const response = await axios.post(`${API_URL}/ideas/generate-followup-questions`, completeTask, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error generating follow-up questions:', error);
+    throw error;
+  }
+}
+
+// Function to submit follow-up question answers and generate ideas
+export async function submitFollowUpAnswers(taskId: string, answers: FollowUpAnswer[]): Promise<IdeaResponse> {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await axios.post(`${API_URL}/ideas/submit-followup-answers/${taskId}`, answers, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error submitting follow-up answers:', error);
+    throw error;
+  }
+}
+
+// Function to get a specific idea by ID
+export async function getIdea(ideaId: string): Promise<IdeaResponse> {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await axios.get(`${API_URL}/ideas/${ideaId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching idea:', error);
     throw error;
   }
 }
