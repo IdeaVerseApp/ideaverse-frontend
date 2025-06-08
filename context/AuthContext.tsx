@@ -118,8 +118,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeAuth();
   }, [refreshAuthState]);
 
-  // Re-check auth state on window focus
+  // Re-check auth state on window focus and visibility change
   useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && !loading && !user) {
+        await refreshAuthState();
+      }
+    };
+
     const handleFocus = async () => {
       if (!loading && !user) {
         await refreshAuthState();
@@ -128,11 +134,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (typeof window !== 'undefined') {
       window.addEventListener('focus', handleFocus);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
       return () => {
         window.removeEventListener('focus', handleFocus);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
       };
     }
   }, [loading, refreshAuthState, user]);
+
+  // Listen for storage events (for multi-tab support)
+  useEffect(() => {
+    const handleStorageChange = async (e: StorageEvent) => {
+      if (e.key === 'token' || e.key === 'refresh_token') {
+        await refreshAuthState();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleStorageChange);
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+      };
+    }
+  }, [refreshAuthState]);
 
   const handleLogin = async (email: string, password: string) => {
     setLoading(true);

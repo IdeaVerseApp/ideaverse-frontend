@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Diamond, Sparkles, Lightbulb, Loader2, ChevronDown } from "lucide-react"
+import { Diamond, Sparkles, Lightbulb, Loader2, ChevronDown, Heart, Zap, Building, GraduationCap } from "lucide-react"
 import { useIdea } from "@/context/IdeaContext"
 import { generateIdeas } from "@/services/idea-service"
 import { useAuth } from "@/context/AuthContext"
@@ -23,6 +23,42 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
   const [numIdeas, setNumIdeas] = useState(5)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [selectedMethod, setSelectedMethod] = useState<GenerationMethod>("diamond-mine")
+  const [catchyLine, setCatchyLine] = useState("")
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const catchyLines = [
+    "Ready to explore new ideas?",
+    "Time to spark your creativity!",
+    "Let's discover something amazing",
+    "What's your next big idea?",
+    "Ready to innovate?",
+    "Let your ideas take flight",
+    "Time to think differently",
+    "Ready to create something new?",
+    "Let's explore possibilities",
+    "What will you create today?"
+  ]
+
+  // Set random catchy line only once when component mounts
+  useEffect(() => {
+    setCatchyLine(catchyLines[Math.floor(Math.random() * catchyLines.length)])
+  }, [])
+
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.max(120, Math.min(300, textareaRef.current.scrollHeight))}px`;
+    }
+  }, [researchIdea]);
+
+  const ideaTemplates = [
+    "AI in Healthcare",
+    "Sustainable Energy",
+    "Smart Cities",
+    "Education Tech",
+    "Climate Change"
+  ]
 
   const generationMethods = {
     "auto": {
@@ -96,19 +132,21 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
     <div className="min-h-screen bg-background">
       <div className="max-w-3xl mx-auto pt-20 pb-12 px-6">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-4 text-center">Which idea topic would you like to explore?</h1>
+          <h1 className="text-4xl font-medium text-foreground/90 mb-4 text-center tracking-tight">
+            {catchyLine}
+          </h1>
         </div>
 
         <div className="space-y-4">
-          {/* Research idea input */}
+          {/* Research idea input with controls inside */}
           <div className="relative">
             <textarea
+              ref={textareaRef}
               id="research-idea"
-              className={`w-full p-4 pr-32 bg-gray-50 dark:bg-gray-700 border ${
+              className={`w-full p-4 pb-16 bg-gray-50 dark:bg-gray-700 border ${
                 error ? "border-red-500" : "border-gray-200 dark:border-gray-600"
-              } rounded-lg focus:ring-2 focus:ring-slate-500/30 focus:border-transparent resize-none text-gray-900 dark:text-gray-100`}
+              } rounded-lg focus:ring-2 focus:ring-slate-500/30 focus:border-transparent resize-none text-gray-900 dark:text-gray-100 min-h-[120px] max-h-[300px] overflow-y-auto`}
               placeholder="Describe your idea topic..."
-              rows={3}
               value={researchIdea}
               onChange={(e) => {
                 setResearchIdea(e.target.value)
@@ -116,6 +154,79 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
               }}
               disabled={isLoading}
             />
+            
+            {/* Controls inside the text area */}
+            <div className="absolute left-3 bottom-3 flex items-center gap-3">
+              {/* Generation method selector - dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  className="flex items-center justify-between px-2.5 py-1 bg-gray-100/80 dark:bg-gray-700/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-600/50 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-slate-500/30 dark:focus:ring-slate-300/30 text-gray-800 dark:text-gray-200 hover:bg-gray-200/80 dark:hover:bg-gray-600/80 transition-colors"
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  disabled={isLoading}
+                >
+                  <div className="flex items-center">
+                    <span className="mr-1.5 text-slate-600 dark:text-slate-300">
+                      {generationMethods[selectedMethod].icon}
+                    </span>
+                    <span className="truncate">{generationMethods[selectedMethod].name}</span>
+                  </div>
+                  <ChevronDown className="h-3 w-3 ml-1.5 text-gray-500 dark:text-gray-400 shrink-0" />
+                </button>
+
+                {dropdownOpen && (
+                  <div className="absolute z-10 top-full mt-1 w-40 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg">
+                    <ul className="py-1 max-h-60 overflow-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                      {Object.entries(generationMethods).map(([key, method]) => (
+                        <li key={key}>
+                          <button
+                            type="button"
+                            className={`w-full text-left px-3 py-1.5 flex items-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${
+                              selectedMethod === key 
+                                ? "bg-slate-200 dark:bg-slate-300/20 text-slate-700 dark:text-slate-200" 
+                                : "text-gray-800 dark:text-gray-200"
+                            }`}
+                            onClick={() => {
+                              setSelectedMethod(key as GenerationMethod)
+                              setDropdownOpen(false)
+                            }}
+                          >
+                            <span className="mr-2 text-slate-600 dark:text-slate-300">{method.icon}</span>
+                            <div>
+                              <p className="font-medium text-sm">{method.name}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{method.description}</p>
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Number of ideas slider */}
+              <div className="flex items-center gap-1.5 bg-gray-100/80 dark:bg-gray-700/80 backdrop-blur-sm px-2.5 py-1 border border-gray-200/50 dark:border-gray-600/50 rounded-lg">
+                <span className="text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">Ideas:</span>
+                <div className="w-24">
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="range"
+                      id="numIdeas"
+                      name="numIdeas"
+                      min="1"
+                      max="10"
+                      value={numIdeas}
+                      onChange={(e) => setNumIdeas(parseInt(e.target.value))}
+                      className="w-full h-1 bg-gray-300/80 dark:bg-gray-600/80 rounded-lg appearance-none cursor-pointer accent-slate-600 dark:accent-slate-300"
+                      disabled={isLoading}
+                    />
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300 min-w-[1.5ch]">{numIdeas}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Generate button */}
             {researchIdea.trim() && (
               <button
                 className={`absolute right-3 bottom-3 px-4 py-1.5 rounded-lg font-medium transition-colors flex items-center justify-center ${
@@ -138,78 +249,20 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
             )}
           </div>
 
-          {error && <div className="text-red-500 dark:text-red-400 text-sm">{error}</div>}
-
-          {/* Controls row */}
-          <div className="flex items-center gap-4 bg-gray-100 dark:bg-gray-800/50 p-3 rounded-lg">
-            {/* Generation method selector - dropdown */}
-            <div className="relative w-40">
+          {/* Idea Templates */}
+          <div className="flex flex-wrap gap-2 -mt-2">
+            {ideaTemplates.map((template, index) => (
               <button
-                type="button"
-                className="w-full flex items-center justify-between px-3 py-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-500/30 dark:focus:ring-slate-300/30 text-gray-800 dark:text-gray-200"
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                disabled={isLoading}
+                key={index}
+                onClick={() => setResearchIdea(template)}
+                className="px-3 py-1 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm text-gray-700 dark:text-gray-300"
               >
-                <div className="flex items-center">
-                  <span className="mr-2 text-slate-600 dark:text-slate-300">
-                    {generationMethods[selectedMethod].icon}
-                  </span>
-                  <span className="truncate">{generationMethods[selectedMethod].name}</span>
-                </div>
-                <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0" />
+                {template}
               </button>
-
-              {dropdownOpen && (
-                <div className="absolute z-10 mt-1 w-40 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg">
-                  <ul className="py-1 max-h-60 overflow-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                    {Object.entries(generationMethods).map(([key, method]) => (
-                      <li key={key}>
-                        <button
-                          type="button"
-                          className={`w-full text-left px-3 py-1.5 flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                            selectedMethod === key 
-                              ? "bg-slate-100/50 dark:bg-slate-300/20 text-slate-700 dark:text-slate-200" 
-                              : "text-gray-800 dark:text-gray-200"
-                          }`}
-                          onClick={() => {
-                            setSelectedMethod(key as GenerationMethod)
-                            setDropdownOpen(false)
-                          }}
-                        >
-                          <span className="mr-2 text-slate-600 dark:text-slate-300">{method.icon}</span>
-                          <div>
-                            <p className="font-medium text-sm">{method.name}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{method.description}</p>
-                          </div>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            {/* Number of ideas slider */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">Ideas:</span>
-              <div className="w-32">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="range"
-                    id="numIdeas"
-                    name="numIdeas"
-                    min="1"
-                    max="10"
-                    value={numIdeas}
-                    onChange={(e) => setNumIdeas(parseInt(e.target.value))}
-                    className="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-slate-600 dark:accent-slate-300"
-                    disabled={isLoading}
-                  />
-                  <span className="text-sm font-medium text-slate-600 dark:text-slate-300 min-w-[2ch]">{numIdeas}</span>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
+
+          {error && <div className="text-red-500 dark:text-red-400 text-sm">{error}</div>}
         </div>
 
         <div className="text-sm text-gray-500 dark:text-gray-400 mt-4">

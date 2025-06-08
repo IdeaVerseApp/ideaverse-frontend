@@ -85,12 +85,30 @@ export default function SignupPage() {
 
     try {
       const { confirm_password, ...signupData } = formData;
-      await signup(signupData);
+      const response = await signup(signupData);
+      console.log("Signup successful:", response);
       router.push('/login?registered=true');
     } catch (err: any) {
-      setFormErrors({
-        general: err.message || 'Failed to create account. Please try again.'
-      });
+      console.error("Signup error:", err);
+      // Handle specific error messages from the backend
+      if (err.message === 'Email already registered') {
+        setFormErrors({
+          ...formErrors,
+          email: 'This email is already registered',
+          general: undefined
+        });
+      } else if (err.message === 'Username already taken') {
+        setFormErrors({
+          ...formErrors,
+          username: 'This username is already taken',
+          general: undefined
+        });
+      } else {
+        setFormErrors({
+          ...formErrors,
+          general: err.message || 'Failed to create account. Please try again.'
+        });
+      }
     } finally {
       setLoading(false);
     }

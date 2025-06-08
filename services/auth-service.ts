@@ -1,6 +1,11 @@
 import axios, { AxiosError } from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
+// Log the API URL to help with debugging
+if (typeof window !== 'undefined') {
+  console.log('API URL:', API_URL);
+}
 
 // Create axios instance with default config
 const api = axios.create({
@@ -186,7 +191,13 @@ api.interceptors.response.use(
 export const signup = async (credentials: SignupCredentials): Promise<{ message: string }> => {
   try {
     const response = await api.post('/auth/signup', credentials);
-    return response.data;
+    // Handle both response formats - either a message object or a user object
+    if (response.data.message) {
+      return response.data;
+    } else {
+      // If the response is a user object (from DB Manager), create a standardized message
+      return { message: "User created successfully" };
+    }
   } catch (error) {
     throw handleApiError(error);
   }

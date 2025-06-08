@@ -17,7 +17,12 @@ export default function MainLayout({ children, activeView = "dashboard" }: MainL
   const { user, isAuthenticated } = useAuth()
 
   // Set default user data if not available from auth context or if not authenticated
-  const userName = isAuthenticated ? (user?.full_name || user?.username || "User") : null
+  const userName = isAuthenticated 
+    ? (user?.full_name || user?.username || "User")
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ')
+    : null
   const userInitial = userName ? (userName.charAt(0) || "U").toUpperCase() : null
   
   // Remove the large logo banner entirely

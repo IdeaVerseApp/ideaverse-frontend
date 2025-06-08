@@ -12,6 +12,10 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "IdeaVerse",
   description: "Your AI-powered idea generation platform",
+  icons: {
+    icon: '/ideaverse_logo.png',
+    apple: '/ideaverse_logo.png',
+  },
 }
 
 export default function RootLayout({
