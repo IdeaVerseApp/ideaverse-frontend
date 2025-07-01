@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.8"/>
+    </linearGradient>
+    <radialGradient id="glowGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="url(#bgGradient)"/>
+  
+  <!-- Abstract brain and neural network visualization -->
+  <g opacity="0.9">
+    <!-- Central brain glow -->
+    <circle cx="400" cy="300" r="100" fill="url(#glowGradient)" opacity="0.4"/>
+    
+    <!-- Brain outline -->
+    <path d="M400,200 C450,200 480,220 490,240 C500,260 500,290 490,310 C480,330 450,340 450,340
+             C450,340 470,350 480,370 C490,390 480,430 450,450 C420,470 380,460 360,450
+             C340,460 300,470 270,450 C240,430 230,390 240,370 C250,350 270,340 270,340
+             C270,340 240,330 230,310 C220,290 220,260 230,240 C240,220 270,200 320,200
+             C340,200 360,230 400,230 C440,230 460,200 400,200 Z"
+          stroke="#3b82f6" stroke-width="2" fill="none" opacity="0.8"/>
+    
+    <!-- Neural network nodes -->
+    <g id="nodes">
+      <circle cx="300" cy="250" r="8" fill="#3b82f6" opacity="0.8"/>
+      <circle cx="350" cy="220" r="8" fill="#3b82f6" opacity="0.8"/>
+      <circle cx="400" cy="250" r="8" fill="#3b82f6" opacity="0.8"/>
+      <circle cx="450" cy="220" r="8" fill="#3b82f6" opacity="0.8"/>
+      <circle cx="500" cy="250" r="8" fill="#3b82f6" opacity="0.8"/>
+      
+      <circle cx="300" cy="300" r="8" fill="#3b82f6" opacity="0.8"/>
+      <circle cx="350" cy="300" r="8" fill="#3b82f6" opacity="0.8"/>
+      <circle cx="400" cy="300" r="8" fill="#3b82f6" opacity="0.8"/>
+      <circle cx="450" cy="300" r="8" fill="#3b82f6" opacity="0.8"/>
+      <circle cx="500" cy="300" r="8" fill="#3b82f6" opacity="0.8"/>
+      
+      <circle cx="300" cy="350" r="8" fill="#3b82f6" opacity="0.8"/>
+      <circle cx="350" cy="380" r="8" fill="#3b82f6" opacity="0.8"/>
+      <circle cx="400" cy="350" r="8" fill="#3b82f6" opacity="0.8"/>
+      <circle cx="450" cy="380" r="8" fill="#3b82f6" opacity="0.8"/>
+      <circle cx="500" cy="350" r="8" fill="#3b82f6" opacity="0.8"/>
+    </g>
+    
+    <!-- Neural network connections -->
+    <g id="connections" opacity="0.3">
+      <!-- First layer to second layer -->
+      <line x1="300" y1="250" x2="300" y2="300" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="300" y1="250" x2="350" y2="300" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="300" y1="250" x2="400" y2="300" stroke="#94a3b8" stroke-width="1"/>
+      
+      <line x1="350" y1="220" x2="300" y2="300" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="350" y1="220" x2="350" y2="300" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="350" y1="220" x2="400" y2="300" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="350" y1="220" x2="450" y2="300" stroke="#94a3b8" stroke-width="1"/>
+      
+      <line x1="400" y1="250" x2="350" y2="300" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="400" y1="250" x2="400" y2="300" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="400" y1="250" x2="450" y2="300" stroke="#94a3b8" stroke-width="1"/>
+      
+      <line x1="450" y1="220" x2="400" y2="300" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="450" y1="220" x2="450" y2="300" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="450" y1="220" x2="500" y2="300" stroke="#94a3b8" stroke-width="1"/>
+      
+      <line x1="500" y1="250" x2="450" y2="300" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="500" y1="250" x2="500" y2="300" stroke="#94a3b8" stroke-width="1"/>
+      
+      <!-- Second layer to third layer -->
+      <line x1="300" y1="300" x2="300" y2="350" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="300" y1="300" x2="350" y2="380" stroke="#94a3b8" stroke-width="1"/>
+      
+      <line x1="350" y1="300" x2="300" y2="350" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="350" y1="300" x2="350" y2="380" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="350" y1="300" x2="400" y2="350" stroke="#94a3b8" stroke-width="1"/>
+      
+      <line x1="400" y1="300" x2="350" y2="380" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="400" y1="300" x2="400" y2="350" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="400" y1="300" x2="450" y2="380" stroke="#94a3b8" stroke-width="1"/>
+      
+      <line x1="450" y1="300" x2="400" y2="350" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="450" y1="300" x2="450" y2="380" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="450" y1="300" x2="500" y2="350" stroke="#94a3b8" stroke-width="1"/>
+      
+      <line x1="500" y1="300" x2="450" y2="380" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="500" y1="300" x2="500" y2="350" stroke="#94a3b8" stroke-width="1"/>
+    </g>
+    
+    <!-- Pulsing nodes (animated) -->
+    <circle cx="300" cy="250" r="8" fill="#3b82f6" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;0.3;0.8" dur="2s" repeatCount="indefinite" begin="0s"/>
+    </circle>
+    <circle cx="450" cy="300" r="8" fill="#3b82f6" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;0.3;0.8" dur="2s" repeatCount="indefinite" begin="0.5s"/>
+    </circle>
+    <circle cx="400" cy="350" r="8" fill="#3b82f6" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;0.3;0.8" dur="2s" repeatCount="indefinite" begin="1s"/>
+    </circle>
+  </g>
+  
+  <!-- Research papers floating around -->
+  <g opacity="0.7">
+    <rect x="150" y="180" width="60" height="80" rx="2" ry="2" fill="#f8fafc" opacity="0.1" transform="rotate(-15, 150, 180)"/>
+    <rect x="590" y="180" width="60" height="80" rx="2" ry="2" fill="#f8fafc" opacity="0.1" transform="rotate(15, 590, 180)"/>
+    <rect x="180" y="400" width="60" height="80" rx="2" ry="2" fill="#f8fafc" opacity="0.1" transform="rotate(10, 180, 400)"/>
+    <rect x="560" y="400" width="60" height="80" rx="2" ry="2" fill="#f8fafc" opacity="0.1" transform="rotate(-10, 560, 400)"/>
+  </g>
+  
+  <!-- Floating particles -->
+  <g opacity="0.5">
+    <circle cx="170" cy="150" r="2" fill="#93c5fd"/>
+    <circle cx="630" cy="160" r="2" fill="#93c5fd"/>
+    <circle cx="220" cy="450" r="2" fill="#93c5fd"/>
+    <circle cx="580" cy="430" r="2" fill="#93c5fd"/>
+    <circle cx="400" cy="170" r="2" fill="#93c5fd"/>
+    <circle cx="400" cy="430" r="2" fill="#93c5fd"/>
+    <circle cx="180" cy="300" r="2" fill="#93c5fd"/>
+    <circle cx="620" cy="300" r="2" fill="#93c5fd"/>
+  </g>
+</svg> 

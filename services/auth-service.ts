@@ -43,8 +43,12 @@ const tokenCache = {
     if (typeof window !== 'undefined') {
       if (token) {
         localStorage.setItem('token', token);
+        // Set cookie for middleware authentication
+        document.cookie = `token=${token}; path=/; max-age=604800; SameSite=Lax`;
       } else {
         localStorage.removeItem('token');
+        // Remove token cookie
+        document.cookie = 'token=; path=/; max-age=0; SameSite=Lax';
       }
     }
   },
@@ -54,8 +58,12 @@ const tokenCache = {
     if (typeof window !== 'undefined') {
       if (token) {
         localStorage.setItem('refresh_token', token);
+        // Set refresh token cookie
+        document.cookie = `refresh_token=${token}; path=/; max-age=604800; SameSite=Lax`;
       } else {
         localStorage.removeItem('refresh_token');
+        // Remove refresh token cookie
+        document.cookie = 'refresh_token=; path=/; max-age=0; SameSite=Lax';
       }
     }
   },
@@ -66,6 +74,9 @@ const tokenCache = {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('token');
       localStorage.removeItem('refresh_token');
+      // Remove token cookies
+      document.cookie = 'token=; path=/; max-age=0; SameSite=Lax';
+      document.cookie = 'refresh_token=; path=/; max-age=0; SameSite=Lax';
     }
   },
   
@@ -258,11 +269,27 @@ export const logout = async (): Promise<void> => {
   }
 };
 
-export const getCurrentUser = async (): Promise<AuthResponse['user']> => {
+export const getCurrentUser = async (): Promise<AuthResponse['user'] | null> => {
   try {
+    // Check if token exists before making API call
+    const token = tokenCache.getAccessToken();
+    if (!token) {
+      return null;
+    }
+    
     const response = await api.get('/auth/me');
+    if (!response.data || !response.data.id) {
+      tokenCache.clearTokens(); // Clear invalid tokens
+      return null;
+    }
+    
     return response.data;
   } catch (error) {
-    throw handleApiError(error);
+    console.error('Error getting current user:', error);
+    // Only clear tokens on 401/403 errors
+    if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
+      tokenCache.clearTokens();
+    }
+    return null;
   }
 }; 

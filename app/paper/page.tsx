@@ -8,6 +8,7 @@ import Footer from "@/components/footer"
 import ResearchPaperWriting from "@/components/research-paper-writing"
 import type { UserData } from "@/types/user"
 import { useAuth } from "@/context/AuthContext"
+import ComingSoon from "@/components/coming-soon"
 
 export default function PaperPage() {
   const pathname = usePathname()
@@ -84,7 +85,9 @@ export default function PaperPage() {
 
         {/* Content */}
         <div className="flex-1">
-          <ResearchPaperWriting />
+          <ComingSoon>
+            <ResearchPaperWriting />
+          </ComingSoon>
         </div>
 
         {/* Footer */}

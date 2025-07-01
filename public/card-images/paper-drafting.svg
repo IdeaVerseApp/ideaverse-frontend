@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a5f" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#173552" stop-opacity="0.8"/>
+    </linearGradient>
+    <linearGradient id="paperGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#e2e8f0" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="url(#bgGradient)"/>
+  
+  <!-- Abstract paper elements -->
+  <g opacity="0.9">
+    <!-- Main paper -->
+    <rect x="250" y="150" width="300" height="380" rx="5" ry="5" fill="url(#paperGradient)" stroke="#cbd5e1" stroke-width="1"/>
+    
+    <!-- Text lines on paper -->
+    <line x1="280" y1="190" x2="520" y2="190" stroke="#94a3b8" stroke-width="2" opacity="0.7"/>
+    <line x1="280" y1="220" x2="480" y2="220" stroke="#94a3b8" stroke-width="2" opacity="0.7"/>
+    <line x1="280" y1="250" x2="520" y2="250" stroke="#94a3b8" stroke-width="1" opacity="0.5"/>
+    <line x1="280" y1="270" x2="500" y2="270" stroke="#94a3b8" stroke-width="1" opacity="0.5"/>
+    <line x1="280" y1="290" x2="520" y2="290" stroke="#94a3b8" stroke-width="1" opacity="0.5"/>
+    <line x1="280" y1="310" x2="450" y2="310" stroke="#94a3b8" stroke-width="1" opacity="0.5"/>
+    
+    <line x1="280" y1="350" x2="520" y2="350" stroke="#94a3b8" stroke-width="1" opacity="0.5"/>
+    <line x1="280" y1="370" x2="510" y2="370" stroke="#94a3b8" stroke-width="1" opacity="0.5"/>
+    <line x1="280" y1="390" x2="520" y2="390" stroke="#94a3b8" stroke-width="1" opacity="0.5"/>
+    <line x1="280" y1="410" x2="480" y2="410" stroke="#94a3b8" stroke-width="1" opacity="0.5"/>
+    <line x1="280" y1="430" x2="520" y2="430" stroke="#94a3b8" stroke-width="1" opacity="0.5"/>
+    <line x1="280" y1="450" x2="490" y2="450" stroke="#94a3b8" stroke-width="1" opacity="0.5"/>
+    <line x1="280" y1="470" x2="520" y2="470" stroke="#94a3b8" stroke-width="1" opacity="0.5"/>
+    <line x1="280" y1="490" x2="450" y2="490" stroke="#94a3b8" stroke-width="1" opacity="0.5"/>
+    
+    <!-- Paper stack in background -->
+    <rect x="230" y="160" width="300" height="380" rx="5" ry="5" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1" opacity="0.5"/>
+    <rect x="210" y="170" width="300" height="380" rx="5" ry="5" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" opacity="0.3"/>
+  </g>
+  
+  <!-- Abstract elements -->
+  <g opacity="0.6">
+    <circle cx="170" cy="220" r="30" fill="#60a5fa" opacity="0.3"/>
+    <circle cx="630" cy="350" r="40" fill="#60a5fa" opacity="0.2"/>
+    <circle cx="180" cy="450" r="25" fill="#818cf8" opacity="0.2"/>
+    <circle cx="610" cy="180" r="20" fill="#818cf8" opacity="0.3"/>
+  </g>
+  
+  <!-- Connecting lines between papers and abstract elements -->
+  <line x1="250" y1="220" x2="200" y2="220" stroke="#94a3b8" stroke-width="1" opacity="0.3"/>
+  <line x1="550" y1="350" x2="590" y2="350" stroke="#94a3b8" stroke-width="1" opacity="0.3"/>
+  <line x1="250" y1="450" x2="205" y2="450" stroke="#94a3b8" stroke-width="1" opacity="0.3"/>
+  <line x1="550" y1="180" x2="590" y2="180" stroke="#94a3b8" stroke-width="1" opacity="0.3"/>
+  
+  <!-- Floating particles -->
+  <g opacity="0.7">
+    <circle cx="150" cy="100" r="2" fill="#93c5fd"/>
+    <circle cx="650" cy="150" r="1.5" fill="#93c5fd"/>
+    <circle cx="200" cy="500" r="2" fill="#93c5fd"/>
+    <circle cx="600" cy="450" r="1.5" fill="#93c5fd"/>
+    <circle cx="130" cy="300" r="2" fill="#93c5fd"/>
+    <circle cx="670" cy="250" r="1.5" fill="#93c5fd"/>
+  </g>
+</svg> 

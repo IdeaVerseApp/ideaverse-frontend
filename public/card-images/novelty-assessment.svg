@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.8"/>
+    </linearGradient>
+    <radialGradient id="glowGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#4c1d95" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c084fc" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#7e22ce" stop-opacity="0.8"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="url(#bgGradient)"/>
+  
+  <!-- Central glow -->
+  <circle cx="400" cy="300" r="150" fill="url(#glowGradient)" opacity="0.3"/>
+  
+  <!-- Radar/scanner visualization -->
+  <g opacity="0.8">
+    <!-- Circular grid -->
+    <circle cx="400" cy="300" r="150" stroke="#94a3b8" stroke-width="1" fill="none" opacity="0.2"/>
+    <circle cx="400" cy="300" r="120" stroke="#94a3b8" stroke-width="1" fill="none" opacity="0.2"/>
+    <circle cx="400" cy="300" r="90" stroke="#94a3b8" stroke-width="1" fill="none" opacity="0.2"/>
+    <circle cx="400" cy="300" r="60" stroke="#94a3b8" stroke-width="1" fill="none" opacity="0.2"/>
+    <circle cx="400" cy="300" r="30" stroke="#94a3b8" stroke-width="1" fill="none" opacity="0.2"/>
+    
+    <!-- Grid lines -->
+    <line x1="250" y1="300" x2="550" y2="300" stroke="#94a3b8" stroke-width="1" opacity="0.2"/>
+    <line x1="400" y1="150" x2="400" y2="450" stroke="#94a3b8" stroke-width="1" opacity="0.2"/>
+    <line x1="282" y1="182" x2="518" y2="418" stroke="#94a3b8" stroke-width="1" opacity="0.2"/>
+    <line x1="282" y1="418" x2="518" y2="182" stroke="#94a3b8" stroke-width="1" opacity="0.2"/>
+    
+    <!-- Animated radar sweep -->
+    <path d="M400,300 L400,150 A150,150 0 0,1 550,300 Z" fill="url(#purpleGradient)" opacity="0.2">
+      <animateTransform attributeName="transform" type="rotate" from="0 400 300" to="360 400 300" dur="8s" repeatCount="indefinite"/>
+    </path>
+  </g>
+  
+  <!-- Data points/nodes representing novelty scores -->
+  <g>
+    <!-- High novelty points (purple) -->
+    <circle cx="450" cy="200" r="6" fill="#a855f7" opacity="0.9">
+      <animate attributeName="opacity" values="0.9;0.5;0.9" dur="3s" repeatCount="indefinite" begin="0s"/>
+    </circle>
+    <circle cx="500" cy="320" r="5" fill="#a855f7" opacity="0.9">
+      <animate attributeName="opacity" values="0.9;0.5;0.9" dur="3s" repeatCount="indefinite" begin="0.5s"/>
+    </circle>
+    <circle cx="370" cy="180" r="7" fill="#a855f7" opacity="0.9">
+      <animate attributeName="opacity" values="0.9;0.5;0.9" dur="3s" repeatCount="indefinite" begin="1s"/>
+    </circle>
+    
+    <!-- Medium novelty points (blue) -->
+    <circle cx="320" cy="270" r="5" fill="#60a5fa" opacity="0.8"/>
+    <circle cx="470" cy="380" r="5" fill="#60a5fa" opacity="0.8"/>
+    <circle cx="420" cy="260" r="5" fill="#60a5fa" opacity="0.8"/>
+    <circle cx="350" cy="350" r="5" fill="#60a5fa" opacity="0.8"/>
+    
+    <!-- Low novelty points (gray-blue) -->
+    <circle cx="380" cy="320" r="4" fill="#94a3b8" opacity="0.7"/>
+    <circle cx="420" cy="330" r="4" fill="#94a3b8" opacity="0.7"/>
+    <circle cx="390" cy="280" r="4" fill="#94a3b8" opacity="0.7"/>
+    <circle cx="330" cy="310" r="4" fill="#94a3b8" opacity="0.7"/>
+    <circle cx="450" cy="290" r="4" fill="#94a3b8" opacity="0.7"/>
+  </g>
+  
+  <!-- Score meter/gauge -->
+  <g transform="translate(400, 430)">
+    <path d="M-100,0 A100,100 0 0,1 100,0" fill="none" stroke="#64748b" stroke-width="8" opacity="0.3"/>
+    <path d="M-100,0 A100,100 0 0,1 50,87" fill="none" stroke="#a855f7" stroke-width="8" stroke-linecap="round" opacity="0.8">
+      <animate attributeName="d" values="M-100,0 A100,100 0 0,1 -86.6,-50; M-100,0 A100,100 0 0,1 0,-100; M-100,0 A100,100 0 0,1 86.6,-50; M-100,0 A100,100 0 0,1 100,0; M-100,0 A100,100 0 0,1 50,87" dur="10s" repeatCount="indefinite"/>
+    </path>
+    
+    <!-- Gauge needle -->
+    <line x1="0" y1="0" x2="0" y2="-80" stroke="#e2e8f0" stroke-width="2" opacity="0.9">
+      <animateTransform attributeName="transform" type="rotate" values="150;120;90;60;30;0;-30" dur="10s" repeatCount="indefinite"/>
+    </line>
+    <circle cx="0" cy="0" r="10" fill="#c084fc" stroke="#e2e8f0" stroke-width="2" opacity="0.8"/>
+  </g>
+  
+  <!-- Floating text labels representing novelty metrics -->
+  <g font-family="Arial, sans-serif" font-size="12" opacity="0.8">
+    <text x="460" y="200" fill="#a855f7" opacity="0.9">93%</text>
+    <text x="510" y="320" fill="#a855f7" opacity="0.9">87%</text>
+    <text x="330" y="270" fill="#60a5fa" opacity="0.8">68%</text>
+    <text x="480" y="380" fill="#60a5fa" opacity="0.8">72%</text>
+    <text x="380" y="320" fill="#94a3b8" opacity="0.7">41%</text>
+    <text x="450" y="290" fill="#94a3b8" opacity="0.7">35%</text>
+  </g>
+</svg> 

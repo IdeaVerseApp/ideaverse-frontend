@@ -275,7 +275,7 @@ export default function AboutPage() {
   const ctaSection = useAnimateOnScroll()
 
   return (
-    <MainLayout>
+    <MainLayout initialSidebarOpen={false}>
       <div className="relative min-h-screen">
         {/* Scroll Progress Indicator */}
         <div className="fixed right-8 top-1/2 transform -translate-y-1/2 z-50 hidden lg:block">

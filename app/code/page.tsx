@@ -8,6 +8,7 @@ import Footer from "@/components/footer"
 import CodeGeneration from "@/components/code-generation"
 import type { UserData } from "@/types/user"
 import { useAuth } from "@/context/AuthContext"
+import ComingSoon from "@/components/coming-soon"
 
 export default function CodePage() {
   const searchParams = useSearchParams()
@@ -87,7 +88,9 @@ export default function CodePage() {
 
         {/* Content */}
         <div className="flex-1">
-          <CodeGeneration ideaId={ideaId} />
+          <ComingSoon>
+            <CodeGeneration ideaId={ideaId} />
+          </ComingSoon>
         </div>
 
         {/* Footer */}

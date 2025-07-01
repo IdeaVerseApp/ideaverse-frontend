@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Diamond, Sparkles, Lightbulb, Loader2, ChevronDown, Heart, Zap, Building, GraduationCap } from "lucide-react"
+import { Diamond, Sparkles, Lightbulb, Loader2, ChevronDown, Heart, Zap, Building, GraduationCap, ArrowRight } from "lucide-react"
 import { useIdea } from "@/context/IdeaContext"
 import { generateIdeas, generateFollowUpQuestions, getIdea } from "@/services/idea-service"
 import { useAuth } from "@/context/AuthContext"
 import FollowUpQuestions from "./follow-up-questions"
+import { motion } from "framer-motion"
 
 interface IdeaExplorerProps {
   ideaId?: string | number
@@ -96,9 +97,7 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
       return
     }
 
-    // Check if user is logged in using auth context
     if (!isAuthenticated) {
-      // Redirect to login page if not logged in
       router.push("/login")
       return
     }
@@ -107,27 +106,38 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
     setFollowUpQuestionsLoading(true)
     
     try {
-      // Update the global state
       setExperiment(researchIdea)
       
-      // Generate follow-up questions first
       const response = await generateFollowUpQuestions({
         task_description: researchIdea,
         code: "",
         num_ideas: numIdeas
       })
       
-      // If we have a task ID and follow-up questions, show them
       if (response && response.task_id) {
         setCurrentTaskId(response.task_id)
-        
-        if (response.follow_up_questions && response.follow_up_questions.length > 0) {
-          setFollowUpQuestions(response.follow_up_questions)
-          setShowFollowUpQuestions(true)
-        } else {
-          // If no follow-up questions were generated, proceed directly to idea generation
+
+        const waitForQuestions = async () => {
+          let attempts = 0;
+          const maxAttempts = 10;
+          while (attempts < maxAttempts) {
+            try {
+              const updatedTask = await getIdea(response.task_id)
+              if (updatedTask.follow_up_questions && updatedTask.follow_up_questions.length > 0) {
+                setFollowUpQuestions(updatedTask.follow_up_questions)
+                setShowFollowUpQuestions(true)
+                return
+              }
+            } catch (err) {
+              console.error("Polling attempt failed", err)
+            }
+            await new Promise(res => setTimeout(res, 2000))
+            attempts += 1
+          }
           await handleGenerateIdeasDirectly(response.task_id)
         }
+
+        waitForQuestions()
       } else {
         setError("Failed to start idea generation. Please try again.")
       }
@@ -148,10 +158,7 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
     setIsLoading(true)
     
     try {
-      // Fetch the updated task with answers
       const taskResponse = await getIdea(currentTaskId)
-      
-      // Navigate to the idea details page
       router.push(`/ideas/${currentTaskId}`)
     } catch (err) {
       console.error("Error after follow-up questions:", err)
@@ -164,7 +171,6 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
     setIsLoading(true)
     
     try {
-      // Call the API to generate ideas directly with the existing task ID
       const response = await generateIdeas({
         task_id: taskId,
         task_description: researchIdea,
@@ -174,7 +180,6 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
         system_prompt: `Use the ${generationMethods[selectedMethod].name} method: ${generationMethods[selectedMethod].description}`
       })
       
-      // Navigate to the idea details page
       router.push(`/ideas/${taskId}`)
     } catch (err) {
       console.error("Error generating ideas:", err)
@@ -184,156 +189,141 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-3xl mx-auto pt-20 pb-12 px-6">
-        <div className="mb-8">
-          <h1 className="text-4xl font-medium text-foreground/90 mb-4 text-center tracking-tight">
+    <div className="min-h-screen bg-gray-900 text-white">
+      <div className="absolute inset-0 -z-10 h-full w-full bg-gray-900 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:32px_32px]"></div>
+      <div className="max-w-4xl mx-auto pt-24 pb-12 px-6 flex flex-col items-center">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full"
+        >
+          <h1 className="text-5xl font-bold text-gray-50 mb-6 text-center tracking-tight">
             {catchyLine}
           </h1>
-        </div>
 
-        {showFollowUpQuestions ? (
-          <FollowUpQuestions 
-            taskId={currentTaskId || ""}
-            questions={followUpQuestions}
-            onComplete={handleFollowUpQuestionsComplete}
-          />
-        ) : (
-          <div className="space-y-4">
-            {/* Research idea input with controls inside */}
-            <div className="relative">
-              <textarea
-                ref={textareaRef}
-                id="research-idea"
-                className={`w-full p-4 pb-16 bg-gray-50 dark:bg-gray-700 border ${
-                  error ? "border-red-500" : "border-gray-200 dark:border-gray-600"
-                } rounded-lg focus:ring-2 focus:ring-slate-500/30 focus:border-transparent resize-none text-gray-900 dark:text-gray-100 min-h-[120px] max-h-[300px] overflow-y-auto`}
-                placeholder="Describe your idea topic..."
-                value={researchIdea}
-                onChange={(e) => {
-                  setResearchIdea(e.target.value)
-                  if (e.target.value.trim()) setError("")
-                }}
-                disabled={isLoading || followUpQuestionsLoading}
-              />
-              
-              {/* Controls inside the text area */}
-              <div className="absolute left-3 bottom-3 flex items-center gap-3">
-                {/* Generation method selector - dropdown */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    className="flex items-center justify-between px-2.5 py-1 bg-gray-100/80 dark:bg-gray-700/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-600/50 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-slate-500/30 dark:focus:ring-slate-300/30 text-gray-800 dark:text-gray-200 hover:bg-gray-200/80 dark:hover:bg-gray-600/80 transition-colors"
-                    onClick={() => setDropdownOpen(!dropdownOpen)}
-                    disabled={isLoading || followUpQuestionsLoading}
-                  >
-                    <div className="flex items-center">
-                      <span className="mr-1.5 text-slate-600 dark:text-slate-300">
-                        {generationMethods[selectedMethod].icon}
-                      </span>
-                      <span className="truncate">{generationMethods[selectedMethod].name}</span>
-                    </div>
-                    <ChevronDown className="h-3 w-3 ml-1.5 text-gray-500 dark:text-gray-400 shrink-0" />
-                  </button>
-
-                  {dropdownOpen && (
-                    <div className="absolute z-10 top-full mt-1 w-40 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg">
-                      <ul className="py-1 max-h-60 overflow-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                        {Object.entries(generationMethods).map(([key, method]) => (
-                          <li key={key}>
-                            <button
-                              type="button"
-                              className={`w-full text-left px-3 py-1.5 flex items-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${
-                                selectedMethod === key 
-                                  ? "bg-slate-200 dark:bg-slate-300/20 text-slate-700 dark:text-slate-200" 
-                                  : "text-gray-800 dark:text-gray-200"
-                              }`}
-                              onClick={() => {
-                                setSelectedMethod(key as GenerationMethod)
-                                setDropdownOpen(false)
-                              }}
-                            >
-                              <span className="mr-2 text-slate-600 dark:text-slate-300">{method.icon}</span>
-                              <div>
-                                <p className="font-medium text-sm">{method.name}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{method.description}</p>
-                              </div>
-                            </button>
-                          </li>
+          {showFollowUpQuestions ? (
+            <FollowUpQuestions 
+              taskId={currentTaskId || ""}
+              questions={followUpQuestions}
+              onComplete={handleFollowUpQuestionsComplete}
+            />
+          ) : (
+            <div className="space-y-6 w-full">
+              <div className="relative w-full">
+                <textarea
+                  ref={textareaRef}
+                  id="research-idea"
+                  className="w-full p-6 pb-20 bg-gray-800/80 border border-gray-700 rounded-xl focus:outline-none focus:border-blue-500 transition-colors duration-300 resize-none text-gray-100 text-lg placeholder-gray-400 min-h-[150px] max-h-[400px] overflow-y-auto backdrop-blur-sm"
+                  placeholder="Describe your idea topic..."
+                  value={researchIdea}
+                  onChange={(e) => {
+                    setResearchIdea(e.target.value)
+                    if (e.target.value.trim()) setError("")
+                  }}
+                  disabled={isLoading || followUpQuestionsLoading}
+                />
+                
+                <div className="absolute left-4 bottom-4 flex items-center gap-4 w-full pr-8">
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className="flex items-center justify-between px-3 py-1.5 bg-gray-700/80 border border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-gray-200 hover:bg-gray-700 transition-colors"
+                      onClick={() => setDropdownOpen(!dropdownOpen)}
+                      disabled={isLoading || followUpQuestionsLoading}
+                    >
+                      <div className="flex items-center">
+                        <span className="mr-2 text-blue-400">
+                          {generationMethods[selectedMethod].icon}
+                        </span>
+                        <span className="truncate">{generationMethods[selectedMethod].name}</span>
+                      </div>
+                      <ChevronDown className="h-4 w-4 ml-2 text-gray-400" />
+                    </button>
+                    {dropdownOpen && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="absolute bottom-full left-0 mb-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10 overflow-hidden"
+                      >
+                        {Object.keys(generationMethods).map((key) => (
+                          <button
+                            key={key}
+                            className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700 flex items-center"
+                            onClick={() => {
+                              setSelectedMethod(key as GenerationMethod)
+                              setDropdownOpen(false)
+                            }}
+                          >
+                            <span className="mr-3 text-blue-400">{generationMethods[key as GenerationMethod].icon}</span>
+                            {generationMethods[key as GenerationMethod].name}
+                          </button>
                         ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-
-                {/* Number of ideas slider */}
-                <div className="flex items-center gap-1.5 bg-gray-100/80 dark:bg-gray-700/80 backdrop-blur-sm px-2.5 py-1 border border-gray-200/50 dark:border-gray-600/50 rounded-lg">
-                  <span className="text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">Ideas:</span>
-                  <div className="w-24">
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="range"
-                        id="numIdeas"
-                        name="numIdeas"
-                        min="1"
-                        max="10"
-                        value={numIdeas}
-                        onChange={(e) => setNumIdeas(parseInt(e.target.value))}
-                        className="w-full h-1 bg-gray-300/80 dark:bg-gray-600/80 rounded-lg appearance-none cursor-pointer accent-slate-600 dark:accent-slate-300"
-                        disabled={isLoading || followUpQuestionsLoading}
-                      />
-                      <span className="text-xs font-medium text-slate-600 dark:text-slate-300 min-w-[1.5ch]">{numIdeas}</span>
-                    </div>
+                      </motion.div>
+                    )}
                   </div>
+                  
+                  <div className="flex items-center gap-2 text-sm text-gray-300">
+                    <span>Ideas:</span>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      value={numIdeas}
+                      onChange={(e) => setNumIdeas(parseInt(e.target.value))}
+                      className="w-24 h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer accent-blue-500"
+                      disabled={isLoading || followUpQuestionsLoading}
+                    />
+                    <span className="font-semibold">{numIdeas}</span>
+                  </div>
+
+                  <button
+                    onClick={handleStartIdeaGeneration}
+                    className="ml-auto flex items-center justify-center px-6 py-2.5 border border-transparent text-base font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/50"
+                    disabled={isLoading || followUpQuestionsLoading || !researchIdea.trim()}
+                  >
+                    {isLoading || followUpQuestionsLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        <span>Generating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Start Generating</span>
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
               
-              {/* Generate button */}
-              {researchIdea.trim() && (
-                <button
-                  className={`absolute right-3 bottom-3 px-4 py-1.5 rounded-lg font-medium transition-colors flex items-center justify-center ${
-                    isLoading || followUpQuestionsLoading
-                      ? 'bg-slate-600/70 dark:bg-slate-300/80' 
-                      : 'bg-slate-600 hover:bg-slate-700 dark:bg-slate-300 dark:hover:bg-slate-200'
-                  } text-white dark:text-slate-800`}
-                  onClick={handleStartIdeaGeneration}
-                  disabled={isLoading || followUpQuestionsLoading}
-                >
-                  {isLoading || followUpQuestionsLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      {followUpQuestionsLoading ? "Preparing..." : "Generating..."}
-                    </>
-                  ) : (
-                    'Generate'
-                  )}
-                </button>
-              )}
+              <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
+                <span className="text-gray-400">or try a template:</span>
+                {ideaTemplates.map((template) => (
+                  <button
+                    key={template}
+                    onClick={() => setResearchIdea(template)}
+                    className="px-3 py-1 bg-gray-800 border border-gray-700 rounded-full hover:bg-gray-700 hover:border-gray-600 transition-colors text-gray-300"
+                    disabled={isLoading || followUpQuestionsLoading}
+                  >
+                    {template}
+                  </button>
+                ))}
+              </div>
+              
+              {error && <p className="text-red-400 text-center text-sm">{error}</p>}
+
+              <div className="text-center mt-8">
+                <a href="#" className="text-sm text-gray-400 hover:text-gray-200 transition-colors flex items-center justify-center gap-2">
+                  Read our guide to effective idea generation
+                  <ArrowRight className="h-4 w-4" />
+                </a>
+              </div>
             </div>
-
-            {/* Idea Templates */}
-            <div className="flex flex-wrap gap-2 -mt-2">
-              {ideaTemplates.map((template, index) => (
-                <button
-                  key={index}
-                  onClick={() => setResearchIdea(template)}
-                  className="px-3 py-1 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm text-gray-700 dark:text-gray-300"
-                  disabled={isLoading || followUpQuestionsLoading}
-                >
-                  {template}
-                </button>
-              ))}
-            </div>
-
-            {error && <div className="text-red-500 dark:text-red-400 text-sm">{error}</div>}
-          </div>
-        )}
-
-        <div className="text-sm text-gray-500 dark:text-gray-400 mt-4">
-          <a href="#" className="text-slate-600 hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-200 font-medium">Read our guide to effective idea generation →</a>
-        </div>
+          )}
+        </motion.div>
       </div>
     </div>
-  )
+  );
 }
 

@@ -89,7 +89,7 @@ export default function IdeaDetailPage() {
   const router = useRouter()
   const params = useParams()
   const ideaId = params.id as string
-  const { token, isAuthenticated, loading: authLoading, refreshAuthState, user } = useAuth()
+  const { user, isAuthenticated, loading: authLoading } = useAuth()
   const [userData, setUserData] = useState<UserData | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [idea, setIdea] = useState<IdeaDetail | null>(null)
@@ -120,7 +120,7 @@ export default function IdeaDetailPage() {
             personalInformation: [
               {
                 id: 1,
-                name: user.username || user.full_name || user.email,
+                name: user.name || user.username || user.email,
                 email: user.email,
                 role: "Researcher",
                 institution: "Research Institution",
@@ -141,52 +141,35 @@ export default function IdeaDetailPage() {
     fetchUserData()
   }, [isAuthenticated, user])
 
-  // Check auth state and refresh if necessary
+  // Check auth state
   useEffect(() => {
-    const checkAuthAndFetch = async () => {
-      if (!authLoading && !isAuthenticated) {
-        try {
-          const authStatus = await refreshAuthState();
-          if (!authStatus) {
-            router.push("/login");
-          }
-        } catch (error) {
-          console.error("Auth refresh failed:", error);
-          router.push("/login");
-        }
-      }
-    };
-    
-    checkAuthAndFetch();
-  }, [authLoading, isAuthenticated, refreshAuthState, router]);
+    if (!authLoading && !isAuthenticated) {
+      router.push("/login");
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   // Fetch idea details and set up SSE
   useEffect(() => {
     const fetchIdeaDetails = async () => {
       if (!ideaId || authLoading) return;
       
-      if (!isAuthenticated || !token) {
+      if (!isAuthenticated) {
         // Don't try to fetch if not authenticated
         return;
       }
       
       setLoading(true);
       try {
-        console.log(`Fetching idea from: ${API_URL}/ideas/${ideaId}`);
+        console.log(`Fetching idea details for ID: ${ideaId}`);
         
-        // Fetch initial idea details using the id from URL params
-        const response = await axios.get(`${API_URL}/ideas/${ideaId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        console.log("API response:", response.data);
-        setIdea(response.data);
+        // Use the service function instead of direct axios call
+        const ideaData = await getIdea(ideaId);
+        console.log("API response:", ideaData);
+        setIdea(ideaData);
         setLoading(false);
 
         // If the task is still in progress, set up SSE connection
-        if (response.data.status === "PENDING" || response.data.status === "PROCESSING") {
+        if (ideaData.status === "PENDING" || ideaData.status === "PROCESSING") {
           const sse = new EventSource(`${API_URL}/ideas/events/${ideaId}`);
           
           sse.onmessage = (event) => {
@@ -210,16 +193,10 @@ export default function IdeaDetailPage() {
         const error = err as any;
         
         if (error.response?.status === 404) {
-          console.error("Endpoint not found. URL:", `${API_URL}/ideas/${ideaId}`);
           setError(`Idea not found. The requested idea may have been deleted or doesn't exist. (ID: ${ideaId})`);
         } else if (error.response?.status === 401) {
-          // Handle 401 errors by trying to refresh auth
-          try {
-            await refreshAuthState();
-          } catch (authError) {
-            console.error("Auth refresh failed:", authError);
-            setError("Authentication error. Please login again.");
-          }
+          // Handle 401 errors by redirecting to login
+          router.push("/login");
         } else {
           setError(`Failed to load idea details. Error: ${error.message || "Unknown error"}`);
         }
@@ -235,7 +212,7 @@ export default function IdeaDetailPage() {
         eventSource.close();
       }
     };
-  }, [ideaId, token, isAuthenticated, authLoading, refreshAuthState]);
+  }, [ideaId, isAuthenticated, authLoading, router]);
 
   // When we navigate away, save the current idea description to context
   useEffect(() => {

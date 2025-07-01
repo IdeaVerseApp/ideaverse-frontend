@@ -1,11 +1,52 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { generateIdeas } from '@/services/idea-service';
+import { useState, useEffect, useMemo } from 'react';
+import { generateIdeas, getUserIdeas } from '@/services/idea-service';
 import { Sparkle, Loader2, ExternalLink, Bookmark, Lightbulb, AlertCircle, Brain, ChevronRight, Zap, LineChart, BarChart, Beaker, FlaskConical, FileText, Code } from 'lucide-react';
 import MainLayout from '@/components/layouts/MainLayout';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
+const formatDistanceToNow = (date: Date): string => {
+  if (!date) return '';
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  if (seconds < 5) return 'just now';
+
+  let interval = seconds / 31536000;
+  if (interval > 1) {
+    const years = Math.floor(interval);
+    return `${years} year${years > 1 ? 's' : ''} ago`;
+  }
+  interval = seconds / 2592000;
+  if (interval > 1) {
+    const months = Math.floor(interval);
+    return `${months} month${months > 1 ? 's' : ''} ago`;
+  }
+  interval = seconds / 86400;
+  if (interval > 1) {
+    const days = Math.floor(interval);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+  }
+  interval = seconds / 3600;
+  if (interval > 1) {
+    const hours = Math.floor(interval);
+    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  }
+  interval = seconds / 60;
+  if (interval > 1) {
+    const minutes = Math.floor(interval);
+    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+  }
+  return `${Math.floor(seconds)} second${seconds === 1 ? '' : 's'} ago`;
+};
 
 // Sample mock data for testing
 const MOCK_IDEAS = [
@@ -56,14 +97,29 @@ const itemVariants = {
 };
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [prompt, setPrompt] = useState('');
   const [ideas, setIdeas] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [numIdeas, setNumIdeas] = useState(5);
   const [errorMessage, setErrorMessage] = useState('');
-  const [useMockData, setUseMockData] = useState(true);
+  const [useMockData, setUseMockData] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
   const [recentGenerations, setRecentGenerations] = useState(0);
+  const [fetchedInitialIdeas, setFetchedInitialIdeas] = useState(false);
+  const router = useRouter();
+
+  // Helper function to get formatted full name in Title Case
+  const getFormattedFullName = () => {
+    const name = user?.full_name || user?.username;
+    if (name) {
+      return name
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    }
+    return 'Researcher';
+  };
 
   useEffect(() => {
     // Update counter when ideas are generated
@@ -71,6 +127,48 @@ export default function DashboardPage() {
       setRecentGenerations(prev => prev + 1);
     }
   }, [ideas]);
+
+  useEffect(() => {
+    const fetchExistingIdeas = async () => {
+      try {
+        const tasks = await getUserIdeas({ limit: 50, sort_by: 'created_at', sort_order: -1 });
+
+        if (Array.isArray(tasks)) {
+          const collectedIdeas = tasks
+            .filter(task => task && task.task_description && task.status === 'completed')
+            .map((task: any) => {
+              const firstIdea = Array.isArray(task.ideas) && task.ideas.length > 0 ? task.ideas[0] : {};
+              
+              const category = (Array.isArray(task.tags) && task.tags.length > 0 ? task.tags[0] : undefined) || 
+                               firstIdea.category || 
+                               'general';
+              
+              const score = firstIdea.score || (typeof firstIdea.novelty === 'object' ? firstIdea.novelty?.score : firstIdea.novelty);
+
+              return {
+                title: task.task_description,
+                description: firstIdea.description || firstIdea.experiment || `Contains ${task.ideas?.length || 0} generated ideas.`,
+                score: score,
+                category: category,
+                taskId: task._id || task.id || task.task_id,
+                createdAt: task.created_at ? new Date(task.created_at) : new Date(),
+                numIdeasInTask: Array.isArray(task.ideas) ? task.ideas.length : 0,
+              };
+            });
+
+          if (collectedIdeas.length > 0) {
+            setIdeas(collectedIdeas);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch user ideas:', err);
+      } finally {
+        setFetchedInitialIdeas(true);
+      }
+    };
+
+    fetchExistingIdeas();
+  }, []);
 
   const handleGenerateIdeas = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,7 +217,23 @@ export default function DashboardPage() {
       console.log("API Response:", response);
       
       if (response && response.ideas && Array.isArray(response.ideas)) {
-        setIdeas(response.ideas);
+        const firstIdea = response.ideas.length > 0 ? response.ideas[0] : {};
+        const category = (Array.isArray(response.tags) && response.tags.length > 0 ? response.tags[0] : undefined) || 
+                         firstIdea.category || 
+                         'generated';
+        const score = firstIdea.score || (typeof firstIdea.novelty === 'object' ? firstIdea.novelty?.score : firstIdea.novelty);
+
+        const newTask = {
+          title: response.task_description,
+          description: firstIdea.description || firstIdea.experiment || `Contains ${response.ideas.length} generated ideas.`,
+          score: score,
+          category: category,
+          taskId: response.task_id,
+          createdAt: new Date(),
+          numIdeasInTask: response.ideas.length,
+        };
+
+        setIdeas(prev => [newTask, ...prev]);
       } else {
         console.error("Unexpected API response format:", response);
         setErrorMessage('Received an unexpected response from the server. Try using the test data option.');
@@ -140,6 +254,43 @@ export default function DashboardPage() {
 
   const categories = ['all', ...new Set(ideas.map(idea => idea.category).filter(Boolean))];
 
+  const handleRowClick = (idea:any) => {
+    if(idea.taskId){
+      router.push(`/ideas/${idea.taskId}`);
+    }
+  }
+
+  // Prepare data for research potential chart (ideas generated per month over last 6 months)
+  const researchChartData = useMemo(() => {
+    const now = new Date();
+    const labels: string[] = [];
+    const counts: number[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      labels.push(d.toLocaleString('default', { month: 'short' }));
+      counts.push(0);
+    }
+    ideas.forEach((idea) => {
+      if (!idea.createdAt) return;
+      const diffMonths = (now.getFullYear() - idea.createdAt.getFullYear()) * 12 + (now.getMonth() - idea.createdAt.getMonth());
+      if (diffMonths >= 0 && diffMonths < 6) {
+        counts[5 - diffMonths] += 1;
+      }
+    });
+    const max = Math.max(...counts, 1);
+    const heights = counts.map((c) => (c / max) * 90 + 10); // min 10%
+    return { labels, heights, counts };
+  }, [ideas]);
+
+  const chartBarGradients = [
+    "bg-gradient-to-t from-green-400 to-teal-400 dark:from-green-500 dark:to-teal-500",
+    "bg-gradient-to-t from-teal-400 to-cyan-400 dark:from-teal-500 dark:to-cyan-500",
+    "bg-gradient-to-t from-cyan-400 to-sky-400 dark:from-cyan-500 dark:to-sky-500",
+    "bg-gradient-to-t from-sky-400 to-blue-400 dark:from-sky-500 dark:to-blue-500",
+    "bg-gradient-to-t from-blue-400 to-indigo-400 dark:from-blue-500 dark:to-indigo-500",
+    "bg-gradient-to-t from-indigo-400 to-purple-400 dark:from-indigo-500 dark:to-purple-500",
+  ];
+
   return (
     <MainLayout activeView="dashboard">
       <div className="space-y-8">
@@ -155,16 +306,32 @@ export default function DashboardPage() {
           <div className="relative px-8 py-12 sm:px-12 text-white z-10">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between">
               <div className="mb-6 md:mb-0">
-                <h1 className="text-3xl font-bold mb-2">Welcome to IdeaVerse</h1>
-                <p className="text-blue-100">Generate breakthrough research ideas with AI</p>
+                <div className="mb-4">
+                  <motion.h1 
+                    className="text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-100" 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    Howdy, {getFormattedFullName()}!
+                  </motion.h1>
+                  <motion.p 
+                    className="text-xl text-blue-100 font-light"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
+                    What idea would you like to explore today?
+                  </motion.p>
+                </div>
                 
                 <div className="mt-6 flex items-center text-sm">
-                  <div className="flex items-center mr-6">
-                    <Zap className="h-4 w-4 mr-2" />
+                  <div className="flex items-center mr-6 bg-white/10 backdrop-blur px-3 py-1.5 rounded-full">
+                    <Zap className="h-4 w-4 mr-2 text-yellow-300" />
                     <span>{recentGenerations} Recent Generations</span>
                   </div>
-                  <div className="flex items-center">
-                    <Brain className="h-4 w-4 mr-2" />
+                  <div className="flex items-center bg-white/10 backdrop-blur px-3 py-1.5 rounded-full">
+                    <Brain className="h-4 w-4 mr-2 text-blue-300" />
                     <span>{ideas.length} Ideas Created</span>
                   </div>
                 </div>
@@ -323,7 +490,7 @@ export default function DashboardPage() {
           {/* Generated Ideas Display */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 lg:col-span-2">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Your Ideas</h2>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Your Recent Ideas</h2>
               
               {/* Category filter tabs */}
               {ideas.length > 0 && (
@@ -346,96 +513,39 @@ export default function DashboardPage() {
             </div>
             
             {filteredIdeas.length > 0 ? (
-              <motion.div 
-                className="space-y-4"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-              >
+              <div className="space-y-3">
                 {filteredIdeas.map((idea, index) => (
-                  <motion.div 
+                  <div
                     key={index}
-                    variants={itemVariants}
-                    className="p-4 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md transition-all"
-                    whileHover={{ y: -2, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
+                    className="flex items-start justify-between rounded-md bg-gray-900/40 dark:bg-gray-700/60 px-4 py-3 border border-gray-700 hover:border-blue-500 hover:bg-gray-900/60 dark:hover:bg-gray-700 transition-all cursor-pointer"
+                    onClick={() => handleRowClick(idea)}
                   >
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0 mr-3">
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-semibold">
-                          {index + 1}
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex flex-wrap gap-2 items-start justify-between mb-2">
-                          <h3 className="font-medium text-gray-900 dark:text-white text-base">
-                            {idea.title || `Research Idea ${index + 1}`}
-                          </h3>
-                          <div className="flex flex-wrap gap-2">
-                            {idea.category && (
-                              <span className="text-xs px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 rounded-full">
-                                {idea.category}
-                              </span>
-                            )}
-                            {idea.score && (
-                              <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full">
-                                Score: {idea.score}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-                          {typeof idea === 'string' ? idea : idea.description || 'No description provided.'}
+                    <div className="flex-1 mr-4">
+                      <h3 className="text-sm font-semibold text-gray-100 truncate">
+                        {idea.title || `Idea ${index + 1}`}
+                      </h3>
+                      {idea.description && (
+                        <p className="text-xs text-gray-400 line-clamp-2 mt-1">
+                          {idea.description}
                         </p>
-                        
-                        {/* Score visualization if available */}
-                        {(idea.novelty !== undefined || idea.feasibility !== undefined) && (
-                          <div className="grid grid-cols-2 gap-3 mb-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                            {idea.novelty !== undefined && (
-                              <div className="flex flex-col">
-                                <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">Novelty</span>
-                                <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full"
-                                    style={{ width: `${idea.novelty * 100}%` }}
-                                  ></div>
-                                </div>
-                                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-1">{Math.round(idea.novelty * 100)}%</span>
-                              </div>
-                            )}
-                            {idea.feasibility !== undefined && (
-                              <div className="flex flex-col">
-                                <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">Feasibility</span>
-                                <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full"
-                                    style={{ width: `${idea.feasibility * 100}%` }}
-                                  ></div>
-                                </div>
-                                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-1">{Math.round(idea.feasibility * 100)}%</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        
-                        <div className="flex flex-wrap gap-2">
-                          <button className="flex items-center px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
-                            <Bookmark className="h-3.5 w-3.5 mr-1.5" />
-                            Save
-                          </button>
-                          <button className="flex items-center px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
-                            <FlaskConical className="h-3.5 w-3.5 mr-1.5" />
-                            Create Paper
-                          </button>
-                          <button className="flex items-center px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-sm text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors">
-                            <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                            Explore
-                          </button>
-                        </div>
+                      )}
+                      <div className="flex items-center text-xs text-gray-500 mt-2 space-x-2">
+                        <span>{idea.numIdeasInTask} {idea.numIdeasInTask === 1 ? 'idea' : 'ideas'}</span>
+                        <span>·</span>
+                        <span>{formatDistanceToNow(idea.createdAt)}</span>
                       </div>
                     </div>
-                  </motion.div>
+                    <div className="flex flex-col items-end text-xs text-gray-400 whitespace-nowrap">
+                      {idea.category && (
+                        <span className="mb-1 px-2 py-0.5 bg-gray-800 rounded-full text-gray-300">
+                          {idea.category}
+                        </span>
+                      )}
+                      {idea.score && <span>Score: {idea.score}</span>}
+                    </div>
+                  </div>
                 ))}
-              </motion.div>
+              </div>
             ) : (
               <motion.div 
                 className="flex flex-col items-center justify-center h-64 text-center p-6 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-dashed border-gray-300 dark:border-gray-700"
@@ -501,26 +611,28 @@ export default function DashboardPage() {
               
               <div className="md:col-span-2 border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700 p-6">
                 <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Research Potential</h2>
-                <div className="h-[200px] flex items-end space-x-6 px-2">
-                  {Array.from({ length: 6 }).map((_, i) => {
-                    const height = 30 + Math.random() * 70;
-                    return (
-                      <div key={i} className="relative h-full flex flex-col justify-end flex-1">
-                        <div 
-                          className={`rounded-t-md ${
-                            i % 3 === 0 ? 'bg-blue-400 dark:bg-blue-500' :
-                            i % 3 === 1 ? 'bg-indigo-400 dark:bg-indigo-500' :
-                            'bg-purple-400 dark:bg-purple-500'
-                          }`}
-                          style={{ height: `${height}%` }}
-                        ></div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
-                          {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][i]}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <TooltipProvider>
+                  <div className="h-[200px] flex items-end space-x-6 px-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg py-4">
+                    {researchChartData.labels.map((lbl, i) => (
+                      <Tooltip key={lbl}>
+                        <TooltipTrigger asChild>
+                          <div className="relative h-full flex flex-col justify-end flex-1 cursor-pointer group">
+                            <div
+                              className={`${chartBarGradients[i]} rounded-t-lg transition-all duration-300 ease-in-out group-hover:opacity-90 transform group-hover:-translate-y-1`}
+                              style={{ height: `${researchChartData.heights[i]}%` }}
+                            ></div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+                              {lbl}
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{researchChartData.counts[i]} {researchChartData.counts[i] === 1 ? 'idea' : 'ideas'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </div>
+                </TooltipProvider>
                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
                   Research output projections based on your current activity
                 </div>

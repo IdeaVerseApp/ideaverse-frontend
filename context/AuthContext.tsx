@@ -1,223 +1,117 @@
-"use client";
+"use client"
 
-import { AuthResponse, getCurrentUser, login, logout, refreshToken } from '../services/auth-service';
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from "react"
+import { getCurrentUser, logout, login as loginService } from "@/services/auth-service"
 
-import axios from 'axios';
-import { useRouter } from 'next/navigation';
-
-interface AuthContextType {
-  user: AuthResponse['user'] | null;
-  token: string | null;
-  isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  loading: boolean;
-  refreshAuthState: () => Promise<boolean>;
+type User = {
+  id: string
+  email: string
+  username: string
+  full_name?: string
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+interface AuthContextType {
+  user: User | null
+  loading: boolean
+  error: string | null
+  login: (email: string, password: string) => Promise<void>
+  logout: () => Promise<void>
+  setUser: (user: User | null) => void
+  refreshUser: () => Promise<void>
+  isAuthenticated: boolean
+}
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AuthResponse['user'] | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshAttempted, setRefreshAttempted] = useState(false);
-  const router = useRouter();
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-  // Function to refresh authentication state
-  const refreshAuthState = useCallback(async () => {
-    try {
-      const storedToken = localStorage.getItem('token');
-      if (storedToken) {
-        setToken(storedToken);
-        try {
-          const userData = await getCurrentUser();
-          setUser(userData);
-          return true;
-        } catch (error) {
-          if (!refreshAttempted) {
-            setRefreshAttempted(true);
-            // If fetching user data fails, attempt token refresh
-            try {
-              const newToken = await refreshToken();
-              setToken(newToken);
-              const userData = await getCurrentUser();
-              setUser(userData);
-              return true;
-            } catch (refreshError) {
-              // If refresh fails, clear auth state
-              await handleLogout(false);
-              return false;
-            }
-          } else {
-            // Already attempted refresh once, clear auth state
-            await handleLogout(false);
-            return false;
-          }
-        }
-      } else {
-        setUser(null);
-        setToken(null);
-        return false;
-      }
-    } catch (error) {
-      console.error('Failed to refresh auth state:', error);
-      await handleLogout(false);
-      return false;
-    }
-  }, [refreshAttempted]);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Set up axios interceptor for token refresh
+  // Load user from localStorage on initialization
   useEffect(() => {
-    const interceptor = axios.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        const originalRequest = error.config;
-        
-        // If error is 401 Unauthorized and we haven't tried refreshing yet
-        if (error.response?.status === 401 && !originalRequest._retry && token) {
-          originalRequest._retry = true;
-          
-          try {
-            // Attempt to refresh the token
-            const newToken = await refreshToken();
-            // Update auth state
-            setToken(newToken);
-            // Update the token in the current request
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            // Retry the original request
-            return axios(originalRequest);
-          } catch (refreshError) {
-            // If refresh fails, logout and redirect to login
-            await handleLogout(true);
-            return Promise.reject(refreshError);
-          }
-        }
-        
-        return Promise.reject(error);
-      }
-    );
-    
-    // Clean up interceptor on unmount
-    return () => {
-      axios.interceptors.response.eject(interceptor);
-    };
-  }, [token]);
-
-  // Initialize auth state
-  useEffect(() => {
-    const initializeAuth = async () => {
+    const loadUser = async () => {
+      setLoading(true)
       try {
-        await refreshAuthState();
+        // First check if we have a token
+        const token = localStorage.getItem('token')
+        if (!token) {
+          setLoading(false)
+          return
+        }
+        
+        // If we have a token, fetch the current user
+        const userData = await getCurrentUser()
+        if (userData) {
+          setUser(userData)
+        }
+      } catch (err) {
+        console.error("Error loading user:", err)
+        setError("Failed to load user")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-
-    initializeAuth();
-  }, [refreshAuthState]);
-
-  // Re-check auth state on window focus and visibility change
-  useEffect(() => {
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible' && !loading && !user) {
-        await refreshAuthState();
-      }
-    };
-
-    const handleFocus = async () => {
-      if (!loading && !user) {
-        await refreshAuthState();
-      }
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('focus', handleFocus);
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-      return () => {
-        window.removeEventListener('focus', handleFocus);
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-      };
     }
-  }, [loading, refreshAuthState, user]);
 
-  // Listen for storage events (for multi-tab support)
-  useEffect(() => {
-    const handleStorageChange = async (e: StorageEvent) => {
-      if (e.key === 'token' || e.key === 'refresh_token') {
-        await refreshAuthState();
-      }
-    };
+    loadUser()
+  }, [])
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener('storage', handleStorageChange);
-      return () => {
-        window.removeEventListener('storage', handleStorageChange);
-      };
-    }
-  }, [refreshAuthState]);
-
-  const handleLogin = async (email: string, password: string) => {
-    setLoading(true);
+  const login = async (email: string, password: string) => {
     try {
-      const response = await login({ email, password });
+      const response = await loginService({ email, password });
       setUser(response.user);
-      setToken(response.access_token);
-      setRefreshAttempted(false);
-      router.push('/dashboard');
+      setError(null);
       return response;
-    } catch (error) {
-      throw error;
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.error("Login error:", err);
+      throw err;
     }
-  };
+  }
 
-  const handleLogout = async (redirect = true) => {
-    setLoading(true);
+  const handleLogout = async () => {
     try {
-      // Try to logout from server, but continue with local logout regardless
-      try {
-        await logout();
-      } catch (error) {
-        console.warn('Server logout encountered an issue, proceeding with local logout', error);
-      }
-      
-      // Always clear local state
-      setUser(null);
-      setToken(null);
-      setRefreshAttempted(false);
-      
-      if (redirect) {
-        router.push('/login');
-      }
-    } finally {
-      setLoading(false);
+      await logout()
+      setUser(null)
+    } catch (err) {
+      console.error("Error during logout:", err)
+      setError("Failed to logout")
     }
-  };
+  }
+
+  const refreshUser = async () => {
+    try {
+      const userData = await getCurrentUser()
+      if (userData) {
+        setUser(userData)
+      }
+    } catch (err) {
+      console.error("Error refreshing user:", err)
+      setError("Failed to refresh user data")
+    }
+  }
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        token,
-        isAuthenticated: !!user && !!token,
-        login: handleLogin,
-        logout: handleLogout,
         loading,
-        refreshAuthState,
+        error,
+        login,
+        logout: handleLogout,
+        setUser,
+        refreshUser,
+        isAuthenticated: !!user
       }}
     >
       {children}
     </AuthContext.Provider>
-  );
-};
+  )
+}
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
+export function useAuth() {
+  const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider")
   }
-  return context;
-}; 
+  return context
+} 

@@ -10,10 +10,11 @@ import Link from "next/link"
 interface MainLayoutProps {
   children: React.ReactNode
   activeView?: "dashboard" | "ideas" | "code" | "paper" | "profile"
+  initialSidebarOpen?: boolean
 }
 
-export default function MainLayout({ children, activeView = "dashboard" }: MainLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+export default function MainLayout({ children, activeView = "dashboard", initialSidebarOpen = true }: MainLayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(initialSidebarOpen)
   const { user, isAuthenticated } = useAuth()
 
   // Set default user data if not available from auth context or if not authenticated
