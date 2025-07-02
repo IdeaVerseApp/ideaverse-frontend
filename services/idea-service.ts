@@ -1,7 +1,8 @@
 import type { IdeaExplorationResult, SimilarPaper } from "@/types/idea-exploration"
+import type { IdeaResponse, FollowUpQuestion, FollowUpAnswer, IdeaFeedback } from "@/types/idea"
 import axios from "axios"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 interface IdeaGenerationTask {
   task_id?: string        // Optional, backend will generate if missing
@@ -14,32 +15,6 @@ interface IdeaGenerationTask {
   prev_ideas?: any[]
   seed_ideas?: any[]
   system_prompt?: string
-}
-
-interface FollowUpQuestion {
-  id: string
-  question: string
-  context?: string
-}
-
-interface FollowUpAnswer {
-  question_id: string
-  answer: string
-}
-
-interface IdeaResponse {
-  task_id: string
-  user_id: string
-  status: string
-  task_description: string
-  thought?: string
-  ideas?: any[]
-  reflection_rounds?: number
-  error?: string
-  tags?: string[]
-  similar_papers?: SimilarPaper[]
-  follow_up_questions?: FollowUpQuestion[]
-  follow_up_answers?: FollowUpAnswer[]
 }
 
 export async function generateIdeaExploration(researchIdea: string): Promise<IdeaExplorationResult> {
@@ -74,24 +49,34 @@ export async function generateIdeaExploration(researchIdea: string): Promise<Ide
         "Start training with simple code and gradually introduce complex algorithms.",
       ],
     },
+    relatedResearch: [],
     similarPapers: [
       {
         title: "LEAF: A Learning-based Compiler for Fast GPU Code Generation",
-        link: "https://example.com/papers/1",
+        source_url: "https://example.com/papers/1",
         citations: 34,
-        relevance: 0.89,
+        authors: [],
+        source: "ExampleSource",
+        semantic_similarity: 0.89,
+        keywords: [],
       },
       {
         title: "Deep Reinforcement Learning for Compiler Optimization",
-        link: "https://example.com/papers/2",
+        source_url: "https://example.com/papers/2",
         citations: 67,
-        relevance: 0.76,
+        authors: [],
+        source: "ExampleSource",
+        semantic_similarity: 0.76,
+        keywords: [],
       },
       {
         title: "AutoTune: Adaptive Compiler Optimizations for Deep Learning",
-        link: "https://example.com/papers/3",
+        source_url: "https://example.com/papers/3",
         citations: 112,
-        relevance: 0.72,
+        authors: [],
+        source: "ExampleSource",
+        semantic_similarity: 0.72,
+        keywords: [],
       },
     ],
   }
@@ -110,14 +95,15 @@ export async function generateIdeas(task: IdeaGenerationTask): Promise<IdeaRespo
       ...task,
       user_id: task.user_id || "unknown", // Default user_id if not provided
       code: task.code || "",              // Empty string default
-      num_ideas: task.num_ideas || 5,     // Default to 5 ideas
+      num_ideas: task.num_ideas || 2,     // Default to 2 ideas
       num_reflections: task.num_reflections || (task.reflection_rounds || 2),
       prev_ideas: task.prev_ideas || [],
       seed_ideas: task.seed_ideas || [],
-      system_prompt: task.system_prompt || ""
+      system_prompt: task.system_prompt || "",
+      status: "started"
     };
 
-    const response = await axios.post(`${API_URL}/ideas/generate`, completeTask, {
+    const response = await axios.post(`${API_URL}/ideatask/generate`, completeTask, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -139,18 +125,23 @@ export async function generateFollowUpQuestions(task: IdeaGenerationTask): Promi
       throw new Error('Authentication required');
     }
 
+    // Validate the required field
+    if (!task.task_description) {
+      throw new Error('Task description is required');
+    }
+
     // Ensure all required fields are set with defaults if not provided
     const completeTask = {
-      ...task,
-      user_id: task.user_id || "unknown",
+      task_description: task.task_description,
+      task_id: task.task_id || undefined,
+      user_id: task.user_id || undefined,
       code: task.code || "",
-      num_ideas: task.num_ideas || 5,
+      num_ideas: task.num_ideas || 2,
       num_reflections: task.num_reflections || 2,
-      prev_ideas: task.prev_ideas || [],
-      seed_ideas: task.seed_ideas || []
+      status: "started"
     };
 
-    const response = await axios.post(`${API_URL}/ideas/generate-followup-questions`, completeTask, {
+    const response = await axios.post(`${API_URL}/ideatask/generate-followup-questions`, completeTask, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -172,7 +163,7 @@ export async function submitFollowUpAnswers(taskId: string, answers: FollowUpAns
       throw new Error('Authentication required');
     }
 
-    const response = await axios.post(`${API_URL}/ideas/submit-followup-answers/${taskId}`, answers, {
+    const response = await axios.post(`${API_URL}/ideatask/submit-followup-answers/${taskId}`, answers, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -186,15 +177,15 @@ export async function submitFollowUpAnswers(taskId: string, answers: FollowUpAns
   }
 }
 
-// Function to get a specific idea by ID
-export async function getIdea(ideaId: string): Promise<IdeaResponse> {
+// Function to get a specific idea task by ID
+export async function getIdeaTask(taskId: string): Promise<IdeaResponse> {
   try {
     const token = localStorage.getItem('token');
     if (!token) {
       throw new Error('Authentication required');
     }
 
-    const response = await axios.get(`${API_URL}/ideas/${ideaId}`, {
+    const response = await axios.get(`${API_URL}/ideatask/${taskId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -202,8 +193,78 @@ export async function getIdea(ideaId: string): Promise<IdeaResponse> {
 
     return response.data;
   } catch (error) {
-    console.error('Error fetching idea:', error);
+    console.error('Error fetching idea task:', error);
     throw error;
+  }
+}
+
+// Function to get individual ideas for a specific task (new endpoint)
+export async function getIdeasForTask(taskId: string): Promise<any[]> {
+  try {
+    const response = await axios.get(`${API_URL}/idea/task/${taskId}`, {
+      headers: getAuthHeaders()
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching ideas for task ${taskId}:`, error);
+    return [];
+  }
+}
+
+// Function to get a specific idea by ID (updated to handle new backend structure)
+export async function getIdea(ideaId: string): Promise<IdeaResponse> {
+  try {
+    // Try to get the idea directly from the idea endpoint
+    const response = await axios.get(`${API_URL}/idea/${ideaId}`, {
+      headers: getAuthHeaders()
+    });
+    
+    // Check if this is an individual idea or an idea task
+    const data = response.data;
+    
+    // If it's an idea task with hydrated ideas, format it for the frontend
+    if (data.task_id && Array.isArray(data.ideas)) {
+      // This is an idea task with ideas array
+      const formattedIdeas = data.ideas.map((idea: any, index: number) => {
+        // If the idea is already a full object, return it
+        if (typeof idea === 'object' && idea !== null && !idea.error) {
+          return idea;
+        }
+        // Otherwise, return a placeholder
+        return {
+          id: typeof idea === 'string' ? idea : `idea-${index}`,
+          name: `Idea ${index + 1}`,
+          description: idea.error || "Idea details not available",
+          error: true
+        };
+      });
+      
+      return {
+        ...data,
+        ideas: formattedIdeas
+      };
+    }
+    
+    // If it's a single idea, wrap it in an ideas array for consistency
+    if (!data.ideas && data.name) {
+      return {
+        ...data,
+        ideas: [data]
+      };
+    }
+    
+    return data;
+  } catch (error) {
+    // Fallback: try to get it as an idea task
+    try {
+      const taskResponse = await axios.get(`${API_URL}/ideatask/${ideaId}`, {
+        headers: getAuthHeaders()
+      });
+      return taskResponse.data;
+    } catch (taskError) {
+      console.error("Error fetching idea:", error);
+      throw error;
+    }
   }
 }
 
@@ -228,7 +289,7 @@ export async function getUserIdeas(params?: {
 
     while (retries >= 0) {
       try {
-        const response = await axios.get(`${API_URL}/ideas/user-tasks`, {
+        const response = await axios.get(`${API_URL}/ideatask/user-tasks`, {
           params,
           headers: {
             'Authorization': `Bearer ${token}`
@@ -282,5 +343,36 @@ export async function getUserIdeas(params?: {
     // Return empty array as fallback to prevent UI from breaking
     return [];
   }
+}
+
+// Function to submit feedback for an idea
+export async function submitIdeaFeedback(
+  ideaId: string,
+  feedback: IdeaFeedback
+): Promise<any> {
+  try {
+    const response = await axios.post(
+      `${API_URL}/idea/${ideaId}/feedback`,
+      feedback,
+      {
+        headers: getAuthHeaders()
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error submitting feedback:', error);
+    throw error;
+  }
+}
+
+// Helper function to get auth headers
+function getAuthHeaders() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+  return {
+    'Authorization': `Bearer ${token}`
+  };
 }
 

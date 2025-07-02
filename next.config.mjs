@@ -22,7 +22,7 @@ const nextConfig = {
   // Enable image optimization for better performance
   images: {
     // Set domains if you're loading images from external domains
-    domains: [],
+    domains: ["images.unsplash.com"],
   },
   experimental: {
     webpackBuildWorker: true,
@@ -32,8 +32,6 @@ const nextConfig = {
     optimizeCss: true,
     scrollRestoration: true,
   },
-  // Enable SWC minification for faster builds
-  swcMinify: true,
   // Add output configuration for Docker deployment
   output: 'standalone',
 }

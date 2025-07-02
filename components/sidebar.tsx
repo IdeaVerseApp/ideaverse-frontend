@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen, ChevronDown, Code, FileText, LayoutDashboard, Lightbulb, LogOut, Menu, Search, Settings, User, PlusCircle, History } from "lucide-react"
+import { BookOpen, ChevronDown, Code, FileText, LayoutDashboard, Lightbulb, LogOut, Menu, Search, Settings, User, History } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useAuth } from "@/context/AuthContext"
@@ -138,22 +138,7 @@ export default function Sidebar({
         </button>
       </div>
 
-      <div className={`p-2 ${sidebarOpen ? 'px-4' : 'px-2'} border-b border-gray-200 dark:border-gray-800 ${!sidebarOpen ? 'mt-2' : ''}`}>
-        <button 
-          onClick={() => router.push('/new-thread')} 
-          className={`flex items-center ${sidebarOpen ? 'px-4 w-full justify-between' : 'px-2 w-full justify-center'} py-2 bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors`}
-          title={!sidebarOpen ? "New Thread" : undefined}
-        >
-          {sidebarOpen ? (
-            <>
-              <span className="text-sm font-medium dark:text-gray-200">New Thread</span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">Ctrl+P</span>
-            </>
-          ) : (
-            <PlusCircle className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-          )}
-        </button>
-      </div>
+
 
       <nav className="flex-1 overflow-y-auto p-2">
         <div className="space-y-1">

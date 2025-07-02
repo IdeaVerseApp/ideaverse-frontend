@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { generateIdeas, getUserIdeas } from '@/services/idea-service';
-import { Sparkle, Loader2, ExternalLink, Bookmark, Lightbulb, AlertCircle, Brain, ChevronRight, Zap, LineChart, BarChart, Beaker, FlaskConical, FileText, Code } from 'lucide-react';
+import { Sparkle, Loader2, ExternalLink, Bookmark, Lightbulb, AlertCircle, Brain, ChevronRight, Zap, LineChart, BarChart, Beaker, FlaskConical, FileText, Code, ChevronDown, TrendingUp, Database, Target, Globe, BookOpen } from 'lucide-react';
 import MainLayout from '@/components/layouts/MainLayout';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -14,6 +14,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
+import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
 const formatDistanceToNow = (date: Date): string => {
   if (!date) return '';
@@ -92,7 +104,7 @@ const itemVariants = {
   visible: { 
     y: 0, 
     opacity: 1,
-    transition: { type: 'spring', stiffness: 100 }
+    transition: { type: "spring" as const, stiffness: 100 }
   }
 };
 
@@ -116,7 +128,8 @@ export default function DashboardPage() {
       return name
         .split(' ')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
+        .join(' ')
+        .replace(/\d+$/, ''); // Remove any trailing numbers (like timestamps)
     }
     return 'Researcher';
   };
@@ -137,23 +150,23 @@ export default function DashboardPage() {
           const collectedIdeas = tasks
             .filter(task => task && task.task_description && task.status === 'completed')
             .map((task: any) => {
-              const firstIdea = Array.isArray(task.ideas) && task.ideas.length > 0 ? task.ideas[0] : {};
+              const firstIdea = Array.isArray(task.ideas) && task.ideas.length > 0 ? task.ideas[0] : null;
               
               const category = (Array.isArray(task.tags) && task.tags.length > 0 ? task.tags[0] : undefined) || 
-                               firstIdea.category || 
+                               (firstIdea?.category) || 
                                'general';
               
-              const score = firstIdea.score || (typeof firstIdea.novelty === 'object' ? firstIdea.novelty?.score : firstIdea.novelty);
+              const score = firstIdea?.score || (typeof firstIdea?.novelty === 'object' ? firstIdea.novelty?.score : firstIdea?.novelty);
 
-              return {
-                title: task.task_description,
-                description: firstIdea.description || firstIdea.experiment || `Contains ${task.ideas?.length || 0} generated ideas.`,
-                score: score,
-                category: category,
-                taskId: task._id || task.id || task.task_id,
-                createdAt: task.created_at ? new Date(task.created_at) : new Date(),
-                numIdeasInTask: Array.isArray(task.ideas) ? task.ideas.length : 0,
-              };
+                              return {
+                  title: task.task_description,
+                  description: firstIdea?.description || firstIdea?.experiment || `Contains ${task.ideas?.length || 0} generated ideas.`,
+                  score: score,
+                  category: category,
+                  taskId: task._id || task.id || task.task_id,
+                  createdAt: task.created_at ? new Date(task.created_at) : new Date(),
+                  numIdeasInTask: Array.isArray(task.ideas) ? task.ideas.length : 0,
+                };
             });
 
           if (collectedIdeas.length > 0) {
@@ -352,6 +365,268 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+        
+        {/* Research Analytics Section - Collapsible */}
+        {ideas.length > 0 && (
+          <motion.div 
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="analytics" className="border-none">
+                <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center mr-4">
+                      <TrendingUp className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Research Analytics Dashboard</h2>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Insights from your research data and paper analysis</p>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-6 pb-6">
+                  {(() => {
+                    // Calculate analytics data from ideas and similar papers
+                    const allSimilarPapers = ideas.flatMap(idea => 
+                      idea.similar_papers || []
+                    );
+                    
+                    const totalPapersScanned = allSimilarPapers.length;
+                    const avgSimilarity = totalPapersScanned > 0 
+                      ? allSimilarPapers.reduce((acc, paper) => acc + (paper.semantic_similarity || 0), 0) / totalPapersScanned
+                      : 0;
+                    
+                    // Publication year distribution
+                    const yearDistribution = allSimilarPapers.reduce((acc, paper) => {
+                      const year = paper.year || 'Unknown';
+                      acc[year] = (acc[year] || 0) + 1;
+                      return acc;
+                    }, {} as Record<string, number>);
+                    
+                    const yearChartData = Object.entries(yearDistribution)
+                      .filter(([year]) => year !== 'Unknown' && parseInt(year) >= 2015)
+                      .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                      .map(([year, count]) => ({ year, count }));
+                    
+                    // Source distribution
+                    const sourceDistribution = allSimilarPapers.reduce((acc, paper) => {
+                      const source = paper.source || 'Unknown';
+                      acc[source] = (acc[source] || 0) + 1;
+                      return acc;
+                    }, {} as Record<string, number>);
+                    
+                    const sourceChartData = Object.entries(sourceDistribution)
+                      .map(([source, count]) => ({ source, count: count as number }))
+                      .sort((a, b) => (b.count as number) - (a.count as number))
+                      .slice(0, 6);
+                    
+                                         // Source colors for pie chart - Enhanced vibrant colors
+                     const sourceColors = {
+                       'arXiv': '#e74c3c',        // Vibrant red
+                       'IEEE': '#1abc9c',         // Turquoise
+                       'Semantic Scholar': '#3498db', // Bright blue
+                       'Scopus': '#2ecc71',       // Emerald green
+                       'PubMed': '#f39c12',       // Orange
+                       'ACM': '#9b59b6',          // Purple
+                       'Google Scholar': '#e67e22', // Dark orange
+                       'DBLP': '#34495e',         // Dark blue-gray
+                       'ResearchGate': '#16a085', // Dark turquoise
+                       'Unknown': '#95a5a6'       // Gray
+                     };
+                    
+                    const totalCitations = allSimilarPapers.reduce((acc, paper) => acc + (paper.citations || 0), 0);
+                    
+                    return (
+                      <div className="space-y-8">
+                        {/* Key Metrics Row */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800/20">
+                             <div className="flex items-center mb-2">
+                               <Database className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-2" />
+                               <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Top Similar Papers</span>
+                             </div>
+                             <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{totalPapersScanned.toLocaleString()}</div>
+                             <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">Across all research ideas</div>
+                           </div>
+                          
+                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800/20">
+                            <div className="flex items-center mb-2">
+                              <Target className="h-5 w-5 text-green-600 dark:text-green-400 mr-2" />
+                              <span className="text-sm font-medium text-green-700 dark:text-green-300">Avg Similarity</span>
+                            </div>
+                            <div className="text-2xl font-bold text-green-900 dark:text-green-100">{(avgSimilarity * 100).toFixed(1)}%</div>
+                            <div className="text-xs text-green-600 dark:text-green-400 mt-1">Semantic relevance</div>
+                          </div>
+                          
+                          <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 rounded-lg border border-purple-100 dark:border-purple-800/20">
+                            <div className="flex items-center mb-2">
+                              <BookOpen className="h-5 w-5 text-purple-600 dark:text-purple-400 mr-2" />
+                              <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Total Citations</span>
+                            </div>
+                            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{totalCitations.toLocaleString()}</div>
+                            <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">Research impact</div>
+                          </div>
+                          
+                          <div className="bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 p-4 rounded-lg border border-orange-100 dark:border-orange-800/20">
+                            <div className="flex items-center mb-2">
+                              <Globe className="h-5 w-5 text-orange-600 dark:text-orange-400 mr-2" />
+                              <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Data Sources</span>
+                            </div>
+                            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{Object.keys(sourceDistribution).length}</div>
+                            <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">Research databases</div>
+                          </div>
+                        </div>
+
+                        {/* Charts Row */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          {/* Publication Year Trend */}
+                          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-6">
+                            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                              <LineChart className="h-5 w-5 mr-2 text-indigo-600 dark:text-indigo-400" />
+                              Publication Year Distribution
+                            </h3>
+                            {yearChartData.length > 0 ? (
+                              <ResponsiveContainer width="100%" height={200}>
+                                <RechartsBarChart data={yearChartData}>
+                                  <XAxis dataKey="year" tick={{ fontSize: 12 }} />
+                                  <YAxis tick={{ fontSize: 12 }} />
+                                  <ChartTooltip 
+                                    content={({ active, payload, label }) => {
+                                      if (active && payload && payload.length) {
+                                        return (
+                                          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+                                            <p className="font-medium">{`Year: ${label}`}</p>
+                                            <p className="text-blue-600 dark:text-blue-400">{`Papers: ${payload[0].value}`}</p>
+                                          </div>
+                                        );
+                                      }
+                                      return null;
+                                    }}
+                                  />
+                                  <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                                </RechartsBarChart>
+                              </ResponsiveContainer>
+                            ) : (
+                              <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">
+                                <div className="text-center">
+                                  <BarChart className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                  <p>No publication year data available</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Source Distribution */}
+                          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-6">
+                            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                              <Globe className="h-5 w-5 mr-2 text-green-600 dark:text-green-400" />
+                              Research Sources
+                            </h3>
+                            {sourceChartData.length > 0 ? (
+                              <div className="flex items-center">
+                                <ResponsiveContainer width="60%" height={200}>
+                                  <PieChart>
+                                    <Pie
+                                      data={sourceChartData}
+                                      cx="50%"
+                                      cy="50%"
+                                      outerRadius={80}
+                                      dataKey="count"
+                                      label={false}
+                                    >
+                                      {sourceChartData.map((entry, index) => (
+                                        <Cell 
+                                          key={`cell-${index}`} 
+                                          fill={sourceColors[entry.source as keyof typeof sourceColors] || sourceColors.Unknown} 
+                                        />
+                                      ))}
+                                    </Pie>
+                                    <ChartTooltip 
+                                      content={({ active, payload }) => {
+                                        if (active && payload && payload.length) {
+                                          const data = payload[0].payload;
+                                          return (
+                                            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+                                              <p className="font-medium">{data.source}</p>
+                                              <p className="text-blue-600 dark:text-blue-400">{`${data.count} papers`}</p>
+                                              <p className="text-sm text-gray-500">{`${((data.count / totalPapersScanned) * 100).toFixed(1)}%`}</p>
+                                            </div>
+                                          );
+                                        }
+                                        return null;
+                                      }}
+                                    />
+                                  </PieChart>
+                                </ResponsiveContainer>
+                                <div className="w-40% pl-4 space-y-2">
+                                  {sourceChartData.map((item, index) => (
+                                    <div key={item.source} className="flex items-center text-sm">
+                                      <div 
+                                        className="w-3 h-3 rounded-full mr-2" 
+                                        style={{ 
+                                          backgroundColor: sourceColors[item.source as keyof typeof sourceColors] || sourceColors.Unknown 
+                                        }}
+                                      />
+                                      <span className="text-gray-700 dark:text-gray-300 flex-1">{item.source}</span>
+                                      <span className="text-gray-500 dark:text-gray-400 font-medium">{item.count}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">
+                                <div className="text-center">
+                                  <Globe className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                  <p>No source data available</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Summary Stats */}
+                        {totalPapersScanned > 0 && (
+                          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-lg p-6 border border-indigo-100 dark:border-indigo-800/20">
+                            <div className="flex items-center mb-4">
+                              <TrendingUp className="h-6 w-6 text-indigo-600 dark:text-indigo-400 mr-3" />
+                              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Research Insights</h3>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                              <div>
+                                <p className="text-gray-600 dark:text-gray-400 mb-1">Most Active Source</p>
+                                <p className="font-semibold text-indigo-700 dark:text-indigo-300">
+                                  {sourceChartData.length > 0 ? sourceChartData[0].source : 'N/A'}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-600 dark:text-gray-400 mb-1">Peak Publication Year</p>
+                                <p className="font-semibold text-indigo-700 dark:text-indigo-300">
+                                  {yearChartData.length > 0 
+                                    ? yearChartData.reduce((max, curr) => (curr.count as number) > (max.count as number) ? curr : max).year 
+                                    : 'N/A'
+                                  }
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-600 dark:text-gray-400 mb-1">High-Impact Papers</p>
+                                <p className="font-semibold text-indigo-700 dark:text-indigo-300">
+                                  {allSimilarPapers.filter(p => (p.citations || 0) > 100).length} papers
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </motion.div>
+        )}
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Idea Generator Card */}

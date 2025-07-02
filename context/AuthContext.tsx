@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { getCurrentUser, logout, login as loginService } from "@/services/auth-service"
+import { useSession, signOut } from "next-auth/react"
+import { useRouter } from "next/navigation"
 
 type User = {
   id: string
@@ -18,6 +20,7 @@ interface AuthContextType {
   logout: () => Promise<void>
   setUser: (user: User | null) => void
   refreshUser: () => Promise<void>
+  refreshAuthState: () => Promise<boolean>
   isAuthenticated: boolean
 }
 
@@ -27,13 +30,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
 
-  // Load user from localStorage on initialization
+  // Load user from localStorage or NextAuth session on initialization
   useEffect(() => {
     const loadUser = async () => {
       setLoading(true)
       try {
-        // First check if we have a token
+        // First check if we have a NextAuth session
+        if (session?.user) {
+          // If we have a NextAuth session, use that user data
+          setUser({
+            id: session.user.id as string,
+            email: session.user.email as string,
+            username: session.user.name as string,
+            full_name: session.user.name as string,
+          })
+          setLoading(false)
+          return
+        }
+        
+        // Otherwise check if we have a token
         const token = localStorage.getItem('token')
         if (!token) {
           setLoading(false)
@@ -53,8 +71,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    loadUser()
-  }, [])
+    if (status !== 'loading') {
+      loadUser()
+    }
+  }, [session, status])
 
   const login = async (email: string, password: string) => {
     try {
@@ -70,11 +90,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleLogout = async () => {
     try {
-      await logout()
-      setUser(null)
+      // Check if using NextAuth
+      if (session) {
+        await signOut({ redirect: false });
+      } else {
+        // Using custom auth
+        await logout();
+      }
+      setUser(null);
+      router.push('/login');
     } catch (err) {
-      console.error("Error during logout:", err)
-      setError("Failed to logout")
+      console.error("Error during logout:", err);
+      setError("Failed to logout");
     }
   }
 
@@ -90,6 +117,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const refreshAuthState = async (): Promise<boolean> => {
+    try {
+      // First check NextAuth session
+      if (session?.user) {
+        setUser({
+          id: session.user.id as string,
+          email: session.user.email as string,
+          username: session.user.name as string,
+          full_name: session.user.name as string,
+        });
+        return true;
+      }
+      
+      // Then check custom auth
+      const token = localStorage.getItem('token');
+      if (token) {
+        const userData = await getCurrentUser();
+        if (userData) {
+          setUser(userData);
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (err) {
+      console.error("Error refreshing auth state:", err);
+      return false;
+    }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -100,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout: handleLogout,
         setUser,
         refreshUser,
+        refreshAuthState,
         isAuthenticated: !!user
       }}
     >

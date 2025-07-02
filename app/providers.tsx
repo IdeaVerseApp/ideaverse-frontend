@@ -1,7 +1,7 @@
 'use client';
 
 import { ThemeProvider } from '@/components/theme-provider';
-import SessionProvider from '@/components/session-provider';
+import { SessionProvider } from '@/components/session-provider';
 import { AuthProvider } from '@/context/AuthContext';
 import { IdeaProvider } from '@/context/IdeaContext';
 

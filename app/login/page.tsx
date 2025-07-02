@@ -61,7 +61,10 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setIsLoading(true)
     try {
-      await signIn("google", { callbackUrl: redirectPath })
+      await signIn("google", { 
+        callbackUrl: redirectPath,
+        redirect: true  // Force redirect
+      })
     } catch (err: any) {
       console.error("Google login error:", err)
       setError("Failed to login with Google. Please try again.")

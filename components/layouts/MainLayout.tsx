@@ -23,8 +23,15 @@ export default function MainLayout({ children, activeView = "dashboard", initial
         .split(' ')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join(' ')
+        .replace(/\d+$/, '') // Remove any trailing numbers (like timestamps)
     : null
-  const userInitial = userName ? (userName.charAt(0) || "U").toUpperCase() : null
+  
+  // Get the first initial from the name - prefer first name if full name exists
+  const userInitial = userName 
+    ? (userName.includes(' ') 
+        ? userName.split(' ')[0].charAt(0) 
+        : userName.charAt(0)).toUpperCase() 
+    : "U"
   
   // Remove the large logo banner entirely
   const showLargeLogo = false

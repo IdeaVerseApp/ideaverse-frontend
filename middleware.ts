@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 
 // Define public paths that don't require authentication
 const PUBLIC_PATHS = [
@@ -36,17 +37,25 @@ function isPublicPath(path: string): boolean {
   );
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = request.cookies.get('token')?.value || request.cookies.get('next-auth.session-token')?.value;
-
+  
   // Allow public paths without authentication
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
+  // Check for NextAuth session token
+  const token = await getToken({ 
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET
+  });
+
+  // Also check for custom auth token
+  const customToken = request.cookies.get('token')?.value;
+
   // Check if user is authenticated, if not redirect to login
-  if (!token) {
+  if (!token && !customToken) {
     const url = new URL('/login', request.url);
     // Add a redirect parameter to return to the requested page after login
     url.searchParams.set('redirect', pathname);

@@ -3,7 +3,14 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { getUserIdeas } from "@/services/idea-service"
-import { Loader2, RefreshCw, Filter, SortAsc, SortDesc, Clock, Check, X, AlertCircle } from "lucide-react"
+import { Loader2, RefreshCw, Filter, SortAsc, SortDesc, Clock, Check, X, AlertCircle, ArrowLeft, Plus } from "lucide-react"
+import FollowupQuestionCards from "./followup-question-cards"
+
+interface FollowUpQuestion {
+  id: string
+  question: string
+  context?: string
+}
 
 interface IdeaTask {
   _id: string          // MongoDB ObjectId
@@ -15,15 +22,17 @@ interface IdeaTask {
   ideas: string[]
   thought: string
   reflection_rounds: number
+  follow_up_questions?: FollowUpQuestion[]
 }
 
-export default function   GeneratedIdeas() {
+export default function GeneratedIdeas() {
   const [ideas, setIdeas] = useState<IdeaTask[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState("created_at")
   const [sortOrder, setSortOrder] = useState(-1)
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
+  const [selectedIdeaForFollowup, setSelectedIdeaForFollowup] = useState<IdeaTask | null>(null)
   const router = useRouter()
 
   const fetchIdeas = async () => {
@@ -60,15 +69,17 @@ export default function   GeneratedIdeas() {
   }, [sortBy, sortOrder, statusFilter])
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case "completed":
         return <Check className="h-5 w-5 text-green-500" />
-      case "PENDING":
+      case "pending":
         return <Clock className="h-5 w-5 text-amber-500" />
-      case "PROCESSING":
+      case "processing":
         return <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
       case "failed":
         return <X className="h-5 w-5 text-red-500" />
+      case "answer_followup":
+        return <AlertCircle className="h-5 w-5 text-purple-500" />
       default:
         return <AlertCircle className="h-5 w-5 text-gray-500" />
     }
@@ -86,7 +97,18 @@ export default function   GeneratedIdeas() {
   }
 
   const handleViewIdea = (idea: IdeaTask) => {
-    router.push(`/ideas/${idea._id}`)
+    // If the idea needs followup questions to be answered, show the followup questions UI
+    if (idea.status.toLowerCase() === "answer_followup" && idea.follow_up_questions && idea.follow_up_questions.length > 0) {
+      setSelectedIdeaForFollowup(idea)
+    } else {
+      router.push(`/ideas/${idea._id}`)
+    }
+  }
+
+  const handleFollowupComplete = () => {
+    setSelectedIdeaForFollowup(null)
+    // Refresh ideas to get updated statuses
+    fetchIdeas()
   }
 
   const toggleSort = (field: string) => {
@@ -98,11 +120,40 @@ export default function   GeneratedIdeas() {
     }
   }
 
+  // If a selected idea for followup exists, show the followup questions UI
+  if (selectedIdeaForFollowup && selectedIdeaForFollowup.follow_up_questions) {
+    return (
+      <div className="max-w-6xl mx-auto pt-6 pb-12 px-4">
+        <button 
+          onClick={() => setSelectedIdeaForFollowup(null)} 
+          className="mb-6 flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back to Ideas
+        </button>
+        
+        <FollowupQuestionCards 
+          taskId={selectedIdeaForFollowup.task_id}
+          questions={selectedIdeaForFollowup.follow_up_questions}
+          onComplete={handleFollowupComplete}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-6xl mx-auto pt-6 pb-12 px-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Generated Ideas</h1>
         <div className="flex items-center space-x-2">
+          <button 
+            onClick={() => router.push('/ideas')}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-md transition-colors"
+            title="Generate New Idea"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Idea</span>
+          </button>
           <button 
             onClick={fetchIdeas}
             className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -203,7 +254,13 @@ export default function   GeneratedIdeas() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       {getStatusIcon(idea.status)}
-                      <span className="ml-2 text-sm text-gray-600 dark:text-gray-300 capitalize">{idea.status}</span>
+                      <span className={`ml-2 text-sm capitalize ${
+                        idea.status.toLowerCase() === 'answer_followup' 
+                          ? 'text-purple-600 dark:text-purple-400 font-medium'
+                          : 'text-gray-600 dark:text-gray-300'
+                      }`}>
+                        {idea.status.toLowerCase() === 'answer_followup' ? 'Needs Follow-up' : idea.status}
+                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -218,9 +275,13 @@ export default function   GeneratedIdeas() {
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <button
                       onClick={() => handleViewIdea(idea)}
-                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
+                      className={`text-sm font-medium ${
+                        idea.status.toLowerCase() === 'answer_followup' 
+                          ? 'text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300'
+                          : 'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300'
+                      }`}
                     >
-                      View Details
+                      {idea.status.toLowerCase() === 'answer_followup' ? 'Answer Questions' : 'View Details'}
                     </button>
                   </td>
                 </tr>

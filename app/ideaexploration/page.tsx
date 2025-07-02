@@ -42,7 +42,7 @@ export default function IdeaExplorationPage() {
 
   const handleGoBack = () => {
     // Navigate specifically to the idea explorer page
-    router.push("/ideas")
+    router.push("/ideas") 
   }
 
   // Only render this page if we're actually on the ideaexploration route

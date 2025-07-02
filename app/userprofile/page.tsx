@@ -111,7 +111,7 @@ export default function UserProfilePage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Sidebar */}
       <Sidebar
         userName={userName}
@@ -134,7 +134,7 @@ export default function UserProfilePage() {
         />
 
         {/* Content */}
-        <div className="flex-1">
+        <main className="flex-1">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="w-12 h-12 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin mb-4"></div>
@@ -143,7 +143,7 @@ export default function UserProfilePage() {
           ) : (
             <UserProfile userData={userData} />
           )}
-        </div>
+        </main>
 
         {/* Footer */}
         <Footer />

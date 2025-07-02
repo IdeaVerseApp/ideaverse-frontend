@@ -22,9 +22,9 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
   const [researchIdea, setResearchIdea] = useState(experiment)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [numIdeas, setNumIdeas] = useState(5)
+  const [numIdeas, setNumIdeas] = useState(2)
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [selectedMethod, setSelectedMethod] = useState<GenerationMethod>("diamond-mine")
+  const [selectedMethod, setSelectedMethod] = useState<GenerationMethod>("reverse-spark")
   const [catchyLine, setCatchyLine] = useState("")
   const [followUpQuestionsLoading, setFollowUpQuestionsLoading] = useState(false)
   const [followUpQuestions, setFollowUpQuestions] = useState<any[]>([])
@@ -126,6 +126,7 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
               if (updatedTask.follow_up_questions && updatedTask.follow_up_questions.length > 0) {
                 setFollowUpQuestions(updatedTask.follow_up_questions)
                 setShowFollowUpQuestions(true)
+                setFollowUpQuestionsLoading(false)
                 return
               }
             } catch (err) {
@@ -134,17 +135,18 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
             await new Promise(res => setTimeout(res, 2000))
             attempts += 1
           }
+          setFollowUpQuestionsLoading(false)
           await handleGenerateIdeasDirectly(response.task_id)
         }
 
         waitForQuestions()
       } else {
         setError("Failed to start idea generation. Please try again.")
+        setFollowUpQuestionsLoading(false)
       }
     } catch (err) {
       console.error("Error starting idea generation:", err)
       setError("An error occurred while starting idea generation. Please try again.")
-    } finally {
       setFollowUpQuestionsLoading(false)
     }
   }
@@ -279,13 +281,22 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
 
                   <button
                     onClick={handleStartIdeaGeneration}
-                    className="ml-auto flex items-center justify-center px-6 py-2.5 border border-transparent text-base font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/50"
+                    className="relative ml-auto flex items-center justify-center px-6 py-2.5 border border-transparent text-base font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/50 overflow-hidden"
                     disabled={isLoading || followUpQuestionsLoading || !researchIdea.trim()}
                   >
                     {isLoading || followUpQuestionsLoading ? (
                       <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        <span>Generating...</span>
+                        <span className="relative z-10 flex items-center">
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          <span>Generating...</span>
+                        </span>
+                        <motion.span
+                          aria-hidden="true"
+                          className="absolute left-0 top-0 h-full w-full bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                          initial={{ x: "-100%" }}
+                          animate={{ x: "100%" }}
+                          transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                        />
                       </>
                     ) : (
                       <>
@@ -319,6 +330,18 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
                   <ArrowRight className="h-4 w-4" />
                 </a>
               </div>
+
+              {followUpQuestionsLoading && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6, repeat: Infinity, repeatType: "reverse" }}
+                  className="flex items-center justify-center gap-2 text-blue-400"
+                >
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Generating follow-up questions…</span>
+                </motion.div>
+              )}
             </div>
           )}
         </motion.div>

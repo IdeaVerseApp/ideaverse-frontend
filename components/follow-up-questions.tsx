@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { submitFollowUpAnswers } from "@/services/idea-service"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface FollowUpQuestion {
   id: string
@@ -24,6 +25,7 @@ export default function FollowUpQuestions({ taskId, questions, onComplete }: Fol
   const [error, setError] = useState("")
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [showAllQuestions, setShowAllQuestions] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
   const handleAnswerChange = (questionId: string, answer: string) => {
     setAnswers(prev => ({
@@ -32,11 +34,7 @@ export default function FollowUpQuestions({ taskId, questions, onComplete }: Fol
     }))
   }
 
-  const isCurrentQuestionAnswered = () => {
-    if (showAllQuestions) return true
-    if (!questions[currentQuestionIndex]) return true
-    return !!answers[questions[currentQuestionIndex].id]?.trim()
-  }
+  const isCurrentQuestionAnswered = () => true
 
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
@@ -55,13 +53,8 @@ export default function FollowUpQuestions({ taskId, questions, onComplete }: Fol
   }
 
   const handleSubmit = async () => {
-    // Check if all questions have answers
-    const unansweredQuestions = questions.filter(q => !answers[q.id]?.trim())
-    if (unansweredQuestions.length > 0) {
-      setError(`Please answer all questions before submitting. ${unansweredQuestions.length} questions unanswered.`)
-      return
-    }
-
+    if (submitted) return // prevent double
+    // We allow empty answers
     setError("")
     setIsSubmitting(true)
 
@@ -74,6 +67,8 @@ export default function FollowUpQuestions({ taskId, questions, onComplete }: Fol
 
       // Submit answers
       await submitFollowUpAnswers(taskId, answersArray)
+      
+      setSubmitted(true)
       
       // Call onComplete callback to proceed to the next step
       onComplete()
@@ -109,6 +104,17 @@ export default function FollowUpQuestions({ taskId, questions, onComplete }: Fol
         </div>
       </div>
 
+      {/* Progress bar */}
+      {!showAllQuestions && (
+        <div className="flex justify-center mb-4">
+          <div className="flex gap-2">
+            {questions.map((_, idx) => (
+              <div key={idx} className={`h-1.5 w-12 rounded-full ${idx === currentQuestionIndex ? 'bg-blue-600' : idx < currentQuestionIndex ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {showAllQuestions ? (
         // Show all questions at once
         <div className="space-y-6">
@@ -136,7 +142,15 @@ export default function FollowUpQuestions({ taskId, questions, onComplete }: Fol
         </div>
       ) : (
         // Show one question at a time
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+        <AnimatePresence mode="wait">
+        <motion.div
+          key={currentQuestionIndex}
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -50 }}
+          transition={{ duration: 0.25 }}
+          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+        >
           {questions[currentQuestionIndex] && (
             <>
               <div className="mb-4">
@@ -174,23 +188,17 @@ export default function FollowUpQuestions({ taskId, questions, onComplete }: Fol
             {currentQuestionIndex < questions.length - 1 ? (
               <button
                 onClick={handleNext}
-                disabled={!isCurrentQuestionAnswered() || isSubmitting}
-                className={`px-4 py-2 rounded-md ${
-                  !isCurrentQuestionAnswered()
-                    ? "bg-blue-300 text-white dark:bg-blue-800"
-                    : "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
-                }`}
+                disabled={isSubmitting}
+                className={`px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600`}
               >
-                Next
+                {(answers[questions[currentQuestionIndex].id]?.trim()) ? 'Next Question' : 'Skip Question'}
               </button>
             ) : (
               <button
                 onClick={handleSubmit}
-                disabled={!isCurrentQuestionAnswered() || isSubmitting}
+                disabled={isSubmitting}
                 className={`px-4 py-2 rounded-md ${
-                  !isCurrentQuestionAnswered()
-                    ? "bg-blue-300 text-white dark:bg-blue-800"
-                    : "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
+                  "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
                 }`}
               >
                 {isSubmitting ? (
@@ -204,7 +212,8 @@ export default function FollowUpQuestions({ taskId, questions, onComplete }: Fol
               </button>
             )}
           </div>
-        </div>
+        </motion.div>
+        </AnimatePresence>
       )}
 
       {showAllQuestions && (
@@ -224,6 +233,17 @@ export default function FollowUpQuestions({ taskId, questions, onComplete }: Fol
             )}
           </button>
         </div>
+      )}
+
+      {/* Success Message */}
+      {submitted && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md text-green-700 dark:text-green-400 text-center"
+        >
+          Answers submitted successfully!
+        </motion.div>
       )}
 
       {error && (
