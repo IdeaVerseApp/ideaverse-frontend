@@ -25,7 +25,10 @@ const handler = NextAuth({
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials.password) return null;
+        if (!credentials?.email || !credentials.password) {
+          console.error("Missing email or password");
+          return null;
+        }
         
         try {
           // Convert to form data format for OAuth2 compatibility
@@ -33,12 +36,16 @@ const handler = NextAuth({
           formData.append('username', credentials.email);
           formData.append('password', credentials.password);
           
-          const response = await axios.post(`${API_URL}/auth/login`, formData, {
+          console.log(`Attempting login for user: ${credentials.email}`);
+          console.log(`API URL: ${API_URL}/api/v1/auth/login`);
+          
+          const response = await axios.post(`${API_URL}/api/v1/auth/login`, formData, {
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
             },
           });
           
+          console.log("Login successful, response:", response.status);
           const { access_token, user } = response.data;
           
           return {
@@ -48,7 +55,15 @@ const handler = NextAuth({
             accessToken: access_token
           };
         } catch (error) {
-          return null;
+          // Enhanced error handling: propagate backend error details so the UI
+          // shows the real reason (401, 422, etc.) instead of a generic 500.
+          if (axios.isAxiosError(error) && error.response) {
+            const detail = (error.response.data as any)?.detail;
+            console.error('Login failed:', detail || error.message);
+            throw new Error(detail || 'Invalid credentials');
+          }
+          console.error('Login request failed:', error);
+          throw new Error('LoginRequestFailed');
         }
       }
     })
@@ -60,7 +75,7 @@ const handler = NextAuth({
         if (account.provider === "google") {
           try {
             // Send Google token to backend for verification and account creation/login
-            const response = await axios.post(`${API_URL}/auth/google`, {
+            const response = await axios.post(`${API_URL}/api/v1/auth/google`, {
               token: account.id_token,
             });
             
@@ -112,7 +127,46 @@ const handler = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false // Set to false for HTTP, true for HTTPS
+      }
+    },
+    callbackUrl: {
+      name: `next-auth.callback-url`,
+      options: {
+        sameSite: 'lax',
+        path: '/',
+        secure: false
+      }
+    },
+    csrfToken: {
+      name: `next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false
+      }
+    },
+    state: {
+      name: `next-auth.state`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false,
+        maxAge: 15 * 60 // 15 minutes
+      }
+    }
+  },
   secret: process.env.NEXTAUTH_SECRET,
+  debug: true, // Enable debug mode for better error logging
 });
 
 export { handler as GET, handler as POST }; 

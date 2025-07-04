@@ -103,7 +103,7 @@ export async function generateIdeas(task: IdeaGenerationTask): Promise<IdeaRespo
       status: "started"
     };
 
-    const response = await axios.post(`${API_URL}/ideatask/generate`, completeTask, {
+    const response = await axios.post(`${API_URL}/api/v1/ideatask/generate`, completeTask, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -141,7 +141,7 @@ export async function generateFollowUpQuestions(task: IdeaGenerationTask): Promi
       status: "started"
     };
 
-    const response = await axios.post(`${API_URL}/ideatask/generate-followup-questions`, completeTask, {
+    const response = await axios.post(`${API_URL}/api/v1/ideatask/generate-followup-questions`, completeTask, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -163,7 +163,7 @@ export async function submitFollowUpAnswers(taskId: string, answers: FollowUpAns
       throw new Error('Authentication required');
     }
 
-    const response = await axios.post(`${API_URL}/ideatask/submit-followup-answers/${taskId}`, answers, {
+    const response = await axios.post(`${API_URL}/api/v1/ideatask/submit-followup-answers/${taskId}`, answers, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -185,7 +185,7 @@ export async function getIdeaTask(taskId: string): Promise<IdeaResponse> {
       throw new Error('Authentication required');
     }
 
-    const response = await axios.get(`${API_URL}/ideatask/${taskId}`, {
+    const response = await axios.get(`${API_URL}/api/v1/ideatask/${taskId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -201,7 +201,7 @@ export async function getIdeaTask(taskId: string): Promise<IdeaResponse> {
 // Function to get individual ideas for a specific task (new endpoint)
 export async function getIdeasForTask(taskId: string): Promise<any[]> {
   try {
-    const response = await axios.get(`${API_URL}/idea/task/${taskId}`, {
+    const response = await axios.get(`${API_URL}/api/v1/idea/task/${taskId}`, {
       headers: getAuthHeaders()
     });
     return response.data;
@@ -215,7 +215,7 @@ export async function getIdeasForTask(taskId: string): Promise<any[]> {
 export async function getIdea(ideaId: string): Promise<IdeaResponse> {
   try {
     // Try to get the idea directly from the idea endpoint
-    const response = await axios.get(`${API_URL}/idea/${ideaId}`, {
+    const response = await axios.get(`${API_URL}/api/v1/idea/${ideaId}`, {
       headers: getAuthHeaders()
     });
     
@@ -257,7 +257,7 @@ export async function getIdea(ideaId: string): Promise<IdeaResponse> {
   } catch (error) {
     // Fallback: try to get it as an idea task
     try {
-      const taskResponse = await axios.get(`${API_URL}/ideatask/${ideaId}`, {
+      const taskResponse = await axios.get(`${API_URL}/api/v1/ideatask/${ideaId}`, {
         headers: getAuthHeaders()
       });
       return taskResponse.data;
@@ -289,7 +289,7 @@ export async function getUserIdeas(params?: {
 
     while (retries >= 0) {
       try {
-        const response = await axios.get(`${API_URL}/ideatask/user-tasks`, {
+        const response = await axios.get(`${API_URL}/api/v1/ideatask/user-tasks`, {
           params,
           headers: {
             'Authorization': `Bearer ${token}`
@@ -352,7 +352,7 @@ export async function submitIdeaFeedback(
 ): Promise<any> {
   try {
     const response = await axios.post(
-      `${API_URL}/idea/${ideaId}/feedback`,
+      `${API_URL}/api/v1/idea/${ideaId}/feedback`,
       feedback,
       {
         headers: getAuthHeaders()

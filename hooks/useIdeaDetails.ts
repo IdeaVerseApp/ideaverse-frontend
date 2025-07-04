@@ -30,7 +30,7 @@ export const useIdeaDetails = (ideaId: string, isAuthenticated: boolean, authLoa
         setLoading(false);
 
         if (ideaData.status === "PENDING" || ideaData.status === "PROCESSING") {
-          const sse = new EventSource(`${API_URL}/ideatask/events/${ideaId}`);
+          const sse = new EventSource(`${API_URL}/api/v1/ideatask/events/${ideaId}`);
           
           sse.onmessage = (event) => {
             const data = JSON.parse(event.data);

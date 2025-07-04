@@ -11,7 +11,7 @@ import { useAuth } from "@/context/AuthContext"
 import React from "react"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { useIdea } from "@/context/IdeaContext"
-import LitMapDiagram from "@/components/LitMapDiagram"
+import dynamic from "next/dynamic"
 import { submitIdeaFeedback, getIdea } from "@/services/idea-service"
 import FollowupQuestionCards from "@/components/followup-question-cards"
 import type { IdeaDetail, FollowUpQuestion, FollowUpAnswer, IdeaFeedback, IdeaItem } from "@/types/idea"
@@ -31,6 +31,11 @@ import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/comp
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+
+const LitMapDiagram = dynamic(() => import("@/components/LitMapDiagram"), {
+  ssr: false,
+  loading: () => <p>Loading diagram...</p>,
+})
 
 export default function IdeaDetailPage() {
   const router = useRouter()

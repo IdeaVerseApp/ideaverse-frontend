@@ -1,11 +1,12 @@
 import axios, { AxiosError } from 'axios';
 
-// Use hardcoded API URL for testing login issues
-const API_URL = 'http://localhost:8080';
+// Use environment variable with fallback
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // Log the API URL to help with debugging
 if (typeof window !== 'undefined') {
   console.log('API URL:', API_URL);
+  console.log('Environment API URL:', process.env.NEXT_PUBLIC_API_URL);
 }
 
 // Create axios instance with default config
@@ -205,7 +206,7 @@ api.interceptors.response.use(
 
 export const signup = async (credentials: SignupCredentials): Promise<{ message: string }> => {
   try {
-    const response = await api.post('/auth/signup', credentials);
+    const response = await api.post('/api/v1/auth/signup', credentials);
     // Handle both response formats - either a message object or a user object
     if (response.data.message) {
       return response.data;
@@ -225,7 +226,7 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     formData.append('username', credentials.email);
     formData.append('password', credentials.password);
 
-    const response = await api.post('/auth/login', formData, {
+    const response = await api.post('/api/v1/auth/login', formData, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json',
@@ -249,7 +250,7 @@ export const refreshToken = async (): Promise<string> => {
       throw new Error('No refresh token available');
     }
 
-    const response = await api.post('/auth/refresh', { token: refreshToken });
+    const response = await api.post('/api/v1/auth/refresh', { token: refreshToken });
     const { access_token } = response.data;
     tokenCache.setAccessToken(access_token);
     
@@ -262,7 +263,7 @@ export const refreshToken = async (): Promise<string> => {
 
 export const logout = async (): Promise<void> => {
   try {
-    await api.post('/auth/logout');
+    await api.post('/api/v1/auth/logout');
     tokenCache.clearTokens();
   } catch (error) {
     // Ensure tokens are removed even if server-side logout fails
@@ -282,7 +283,7 @@ export const getCurrentUser = async (): Promise<AuthResponse['user'] | null> => 
       return null;
     }
     
-    const response = await api.get('/auth/me');
+    const response = await api.get('/api/v1/auth/me');
     if (!response.data || !response.data.id) {
       tokenCache.clearTokens(); // Clear invalid tokens
       return null;
