@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import { getIdea } from '@/services/idea-service';
 import type { IdeaDetail } from '@/types/idea';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export const useIdeaDetails = (ideaId: string, isAuthenticated: boolean, authLoading: boolean) => {
   const [idea, setIdea] = useState<IdeaDetail | null>(null);

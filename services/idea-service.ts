@@ -2,7 +2,7 @@ import type { IdeaExplorationResult, SimilarPaper } from "@/types/idea-explorati
 import type { IdeaResponse, FollowUpQuestion, FollowUpAnswer, IdeaFeedback } from "@/types/idea"
 import axios from "axios"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 interface IdeaGenerationTask {
   task_id?: string        // Optional, backend will generate if missing

@@ -1,6 +1,7 @@
 import axios, { AxiosError } from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+// Use hardcoded API URL for testing login issues
+const API_URL = 'http://localhost:8080';
 
 // Log the API URL to help with debugging
 if (typeof window !== 'undefined') {
@@ -13,6 +14,8 @@ const api = axios.create({
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest'
   },
   // Add timeout to prevent hanging requests
   timeout: 10000,
@@ -126,8 +129,9 @@ export interface ApiError {
 const handleApiError = (error: unknown): ApiError => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError;
+    const responseData = axiosError.response?.data as { detail?: string } || {};
     return {
-      message: axiosError.response?.data?.detail || 'An error occurred',
+      message: responseData.detail || 'An error occurred',
       status: axiosError.response?.status || 500,
     };
   }
@@ -224,6 +228,7 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     const response = await api.post('/auth/login', formData, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json',
       },
     });
     

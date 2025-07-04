@@ -24,7 +24,9 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+// Import recharts components via our wrapper to avoid SSR issues
+import { ResponsiveContainer, PieChart, Pie, Cell, Bar, XAxis, YAxis } from '@/components/recharts'
+import { BarChart as RechartsBarChart } from '@/components/recharts'
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"

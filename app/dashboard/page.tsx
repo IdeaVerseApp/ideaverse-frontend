@@ -25,7 +25,9 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+// Import recharts components via our wrapper to avoid SSR issues
+import { ResponsiveContainer, PieChart, Pie, Cell, Bar, XAxis, YAxis } from '@/components/recharts'
+import { BarChart as RechartsBarChart } from '@/components/recharts'
 
 const formatDistanceToNow = (date: Date): string => {
   if (!date) return '';
