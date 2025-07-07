@@ -31,7 +31,7 @@ export default function CodePage() {
             personalInformation: [
               {
                 id: 1,
-                name: user.username || user.full_name || user.email,
+                name: user.full_name || user.username || user.email,
                 email: user.email,
                 role: "Researcher",
                 institution: "Research Institution",

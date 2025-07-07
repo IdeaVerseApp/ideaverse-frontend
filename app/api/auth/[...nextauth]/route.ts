@@ -86,7 +86,8 @@ const handler = NextAuth({
               accessToken: access_token,
               id: backendUser.id,
               email: backendUser.email,
-              name: backendUser.username,
+              name: backendUser.full_name || backendUser.username,
+              username: backendUser.username,
             };
           } catch (error) {
             console.error("Google login error:", error);
@@ -107,11 +108,12 @@ const handler = NextAuth({
     },
     async session({ session, token }) {
       if (token) {
-        session.user = {
+        (session as any).user = {
           id: token.id,
           name: token.name,
+          username: (token as any).username,
           email: token.email,
-          image: token.picture,
+          image: (token as any).picture,
         };
         session.accessToken = token.accessToken;
         session.error = token.error;

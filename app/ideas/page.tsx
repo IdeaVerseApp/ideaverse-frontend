@@ -6,11 +6,13 @@ import IdeaExplorer from "@/components/idea-explorer"
 import { IdeaProvider } from "@/context/IdeaContext"
 import MainLayout from "@/components/layouts/MainLayout"
 import type { UserData } from "@/types/user"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 
 export default function IdeasPage() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const initialIdea = searchParams.get('idea') || ''
   const [userData, setUserData] = useState<UserData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const { isAuthenticated, user } = useAuth()
@@ -26,7 +28,7 @@ export default function IdeasPage() {
             personalInformation: [
               {
                 id: 1,
-                name: user.username || user.full_name || user.email,
+                name: user.full_name || user.username || user.email,
                 email: user.email,
                 role: "Researcher",
                 institution: "Research Institution",
@@ -59,7 +61,7 @@ export default function IdeasPage() {
       {/* Content */}
       <div className="flex-1">
         <IdeaProvider>
-          <IdeaExplorer />
+          <IdeaExplorer initialIdea={initialIdea} />
         </IdeaProvider>
       </div>
 

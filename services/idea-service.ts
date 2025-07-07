@@ -1,6 +1,7 @@
 import type { IdeaExplorationResult, SimilarPaper } from "@/types/idea-exploration"
 import type { IdeaResponse, FollowUpQuestion, FollowUpAnswer, IdeaFeedback } from "@/types/idea"
 import axios from "axios"
+import { getSession } from "next-auth/react"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -85,10 +86,7 @@ export async function generateIdeaExploration(researchIdea: string): Promise<Ide
 // New function to generate ideas using the backend API
 export async function generateIdeas(task: IdeaGenerationTask): Promise<IdeaResponse> {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('Authentication required');
-    }
+    const authHeaders = await getAuthHeaders();
 
     // Ensure all required fields are set with defaults if not provided
     const completeTask = {
@@ -105,7 +103,7 @@ export async function generateIdeas(task: IdeaGenerationTask): Promise<IdeaRespo
 
     const response = await axios.post(`${API_URL}/api/v1/ideatask/generate`, completeTask, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...authHeaders,
         'Content-Type': 'application/json'
       }
     });
@@ -120,11 +118,6 @@ export async function generateIdeas(task: IdeaGenerationTask): Promise<IdeaRespo
 // Function to generate follow-up questions for an idea
 export async function generateFollowUpQuestions(task: IdeaGenerationTask): Promise<IdeaResponse> {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
     // Validate the required field
     if (!task.task_description) {
       throw new Error('Task description is required');
@@ -141,9 +134,10 @@ export async function generateFollowUpQuestions(task: IdeaGenerationTask): Promi
       status: "started"
     };
 
+    const authHeaders = await getAuthHeaders();
     const response = await axios.post(`${API_URL}/api/v1/ideatask/generate-followup-questions`, completeTask, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...authHeaders,
         'Content-Type': 'application/json'
       }
     });
@@ -158,14 +152,11 @@ export async function generateFollowUpQuestions(task: IdeaGenerationTask): Promi
 // Function to submit follow-up question answers and generate ideas
 export async function submitFollowUpAnswers(taskId: string, answers: FollowUpAnswer[]): Promise<IdeaResponse> {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('Authentication required');
-    }
+    const authHeaders = await getAuthHeaders();
 
     const response = await axios.post(`${API_URL}/api/v1/ideatask/submit-followup-answers/${taskId}`, answers, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...authHeaders,
         'Content-Type': 'application/json'
       }
     });
@@ -180,15 +171,10 @@ export async function submitFollowUpAnswers(taskId: string, answers: FollowUpAns
 // Function to get a specific idea task by ID
 export async function getIdeaTask(taskId: string): Promise<IdeaResponse> {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('Authentication required');
-    }
+    const authHeaders = await getAuthHeaders();
 
     const response = await axios.get(`${API_URL}/api/v1/ideatask/${taskId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      headers: authHeaders
     });
 
     return response.data;
@@ -201,8 +187,9 @@ export async function getIdeaTask(taskId: string): Promise<IdeaResponse> {
 // Function to get individual ideas for a specific task (new endpoint)
 export async function getIdeasForTask(taskId: string): Promise<any[]> {
   try {
+    const authHeaders = await getAuthHeaders();
     const response = await axios.get(`${API_URL}/api/v1/idea/task/${taskId}`, {
-      headers: getAuthHeaders()
+      headers: authHeaders
     });
     return response.data;
   } catch (error) {
@@ -214,9 +201,10 @@ export async function getIdeasForTask(taskId: string): Promise<any[]> {
 // Function to get a specific idea by ID (updated to handle new backend structure)
 export async function getIdea(ideaId: string): Promise<IdeaResponse> {
   try {
-    // Try to get the idea directly from the idea endpoint
+    // Try to get the idea directly from the idea endpoint with proper auth headers
+    const authHeaders = await getAuthHeaders();
     const response = await axios.get(`${API_URL}/api/v1/idea/${ideaId}`, {
-      headers: getAuthHeaders()
+      headers: authHeaders
     });
     
     // Check if this is an individual idea or an idea task
@@ -257,8 +245,9 @@ export async function getIdea(ideaId: string): Promise<IdeaResponse> {
   } catch (error) {
     // Fallback: try to get it as an idea task
     try {
+      const authHeaders = await getAuthHeaders();
       const taskResponse = await axios.get(`${API_URL}/api/v1/ideatask/${ideaId}`, {
-        headers: getAuthHeaders()
+        headers: authHeaders
       });
       return taskResponse.data;
     } catch (taskError) {
@@ -277,11 +266,7 @@ export async function getUserIdeas(params?: {
   sort_order?: number;
 }): Promise<any[]> {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.warn('User not authenticated when fetching ideas');
-      return [];
-    }
+    const authHeaders = await getAuthHeaders();
 
     // Implement retry logic for transient errors
     let retries = 2;
@@ -291,17 +276,15 @@ export async function getUserIdeas(params?: {
       try {
         const response = await axios.get(`${API_URL}/api/v1/ideatask/user-tasks`, {
           params,
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
+          headers: authHeaders,
           // Add timeout to prevent hanging requests
           timeout: 10000
         });
-        
+
         return response.data;
       } catch (error: any) {
         lastError = error;
-        
+
         // Only retry on network errors or 5xx server errors
         if (error.code === 'ECONNABORTED' || 
             (error.response && error.response.status >= 500 && error.response.status < 600)) {
@@ -322,7 +305,7 @@ export async function getUserIdeas(params?: {
     const errorMessage = lastError?.response?.data?.detail || 
                          lastError?.message || 
                          'Unknown error fetching ideas';
-                           
+                          
     const statusCode = lastError?.response?.status || 500;
     
     console.error(`Error fetching user ideas (${statusCode}):`, errorMessage);
@@ -366,13 +349,27 @@ export async function submitIdeaFeedback(
 }
 
 // Helper function to get auth headers
-function getAuthHeaders() {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    throw new Error('Authentication required');
+async function getAuthHeaders() {
+  // First try to get token from localStorage (email/password login)
+  const localToken = localStorage.getItem('token');
+  if (localToken) {
+    return {
+      'Authorization': `Bearer ${localToken}`
+    };
   }
-  return {
-    'Authorization': `Bearer ${token}`
-  };
+
+  // Then try to get session from NextAuth (Google login)
+  try {
+    const session = await getSession();
+    if (session?.accessToken) {
+      return {
+        'Authorization': `Bearer ${session.accessToken}`
+      };
+    }
+  } catch (error) {
+    console.warn('Error getting NextAuth session:', error);
+  }
+
+  throw new Error('Authentication required');
 }
 

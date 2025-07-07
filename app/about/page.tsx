@@ -464,19 +464,19 @@ export default function AboutPage() {
                 className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-4xl mx-auto"
               >
                 <TeamMemberCard 
+                  name="Rohit Singhee" 
+                  role="MS CS Student & GenAI Researcher" 
+                  image="/Rohit Singhee.jpeg" 
+                  linkedin="https://www.linkedin.com/in/rohit-singhee-114ba0205/"
+                  skills={["AI Dev", "Microservice", "Backend", "Cloud Infrastructure"]}
+                />
+                
+                <TeamMemberCard 
                   name="Dhruv Kumar" 
                   role="GenAI Scientist & Professor" 
                   image="/Dhruv Kumar.jpeg" 
                   linkedin="https://www.linkedin.com/in/dhruv-kumar-87082b335/"
                   skills={["GenAI Research", "Academic Leadership", "AI Consulting"]}
-                />
-                
-                <TeamMemberCard 
-                  name="Rohit Singhee" 
-                  role="ME CS Student & GenAI Researcher" 
-                  image="/Rohit Singhee.jpeg" 
-                  linkedin="https://www.linkedin.com/in/rohit-singhee-114ba0205/"
-                  skills={["AI Dev", "Microservice", "Backend", "Cloud Infrastructure"]}
                 />
               </motion.div>
             </div>
@@ -513,7 +513,7 @@ export default function AboutPage() {
           </section>
           
           {/* Mentor Section */}
-          <section className="py-16 bg-blue-50 dark:bg-gray-900/50" ref={mentorSection.ref}>
+          <section id="dhruv" className="py-16 bg-blue-50 dark:bg-gray-900/50" ref={mentorSection.ref}>
             <div className="container mx-auto px-4">
               <div className="max-w-4xl mx-auto">
                 <motion.div 
@@ -567,7 +567,7 @@ export default function AboutPage() {
           </section>
           
           {/* Developer Section - Featuring Rohit Singhee */}
-          <section className="py-16" ref={leadDevSection.ref}>
+          <section id="rohit" className="py-16" ref={leadDevSection.ref}>
             <div className="container mx-auto px-4">
               <div className="max-w-4xl mx-auto">
                 <motion.div 

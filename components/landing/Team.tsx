@@ -31,42 +31,46 @@ const Team = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
           {/* Dhruv Kumar */}
-          <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 shadow-md flex items-center space-x-4 transition-all duration-300 hover:shadow-lg hover:shadow-blue-100 dark:hover:shadow-blue-900/20 transform hover:-translate-y-1 border border-blue-50 dark:border-blue-900/30">
-            <div className="flex-shrink-0">
-              <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-blue-200 dark:border-blue-700">
-                <Image 
-                  src="/Dhruv Kumar.jpeg" 
-                  alt="Dhruv Kumar" 
-                  fill
-                  className="object-cover"
-                />
+          <Link href="/about#dhruv" className="group">
+            <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 shadow-md flex items-center space-x-4 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-blue-100 dark:group-hover:shadow-blue-900/20 transform group-hover:-translate-y-1 border border-blue-50 dark:border-blue-900/30">
+              <div className="flex-shrink-0">
+                <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-blue-200 dark:border-blue-700">
+                  <Image 
+                    src="/Dhruv Kumar.jpeg" 
+                    alt="Dhruv Kumar" 
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Dhruv Kumar</h3>
+                <p className="text-sm text-blue-600 dark:text-blue-400">GenAI Scientist & Professor</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Research in GenAI @ BITS Pilani</p>
               </div>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Dhruv Kumar</h3>
-              <p className="text-sm text-blue-600 dark:text-blue-400">GenAI Scientist & Professor</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Research in GenAI @ BITS Pilani</p>
-            </div>
-          </div>
+          </Link>
           
           {/* Rohit Singhee */}
-          <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 shadow-md flex items-center space-x-4 transition-all duration-300 hover:shadow-lg hover:shadow-blue-100 dark:hover:shadow-blue-900/20 transform hover:-translate-y-1 border border-blue-50 dark:border-blue-900/30">
-            <div className="flex-shrink-0">
-              <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-blue-200 dark:border-blue-700">
-                <Image 
-                  src="/Rohit Singhee.jpeg" 
-                  alt="Rohit Singhee" 
-                  fill
-                  className="object-cover"
-                />
+          <Link href="/about#rohit" className="group">
+            <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 shadow-md flex items-center space-x-4 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-blue-100 dark:group-hover:shadow-blue-900/20 transform group-hover:-translate-y-1 border border-blue-50 dark:border-blue-900/30">
+              <div className="flex-shrink-0">
+                <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-blue-200 dark:border-blue-700">
+                  <Image 
+                    src="/Rohit Singhee.jpeg" 
+                    alt="Rohit Singhee" 
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Rohit Singhee</h3>
+                <p className="text-sm text-blue-600 dark:text-blue-400">MS CS Student & GenAI Researcher</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">AI Dev, Microservices & Backend</p>
               </div>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Rohit Singhee</h3>
-              <p className="text-sm text-blue-600 dark:text-blue-400">ME CS Student & GenAI Researcher</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">AI Dev, Microservices & Backend</p>
-            </div>
-          </div>
+          </Link>
         </div>
       </div>
     </section>

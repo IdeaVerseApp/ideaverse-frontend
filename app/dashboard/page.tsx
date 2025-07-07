@@ -26,8 +26,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 // Import recharts components via our wrapper to avoid SSR issues
-import { ResponsiveContainer, PieChart, Pie, Cell, Bar, XAxis, YAxis } from '@/components/recharts'
-import { BarChart as RechartsBarChart } from '@/components/recharts'
+import { ResponsiveContainer, PieChart, Pie, Cell, BarChart as RechartsBarChart, Bar, XAxis, YAxis } from 'recharts'
 
 const formatDistanceToNow = (date: Date): string => {
   if (!date) return '';
@@ -62,33 +61,7 @@ const formatDistanceToNow = (date: Date): string => {
   return `${Math.floor(seconds)} second${seconds === 1 ? '' : 's'} ago`;
 };
 
-// Sample mock data for testing
-const MOCK_IDEAS = [
-  {
-    title: "Neural Network Optimization for Low-Resource Environments",
-    description: "Research how to optimize neural networks to run efficiently on devices with limited computational resources, such as IoT devices or old smartphones.",
-    score: 8.7,
-    category: "Machine Learning",
-    novelty: 0.87,
-    feasibility: 0.76
-  },
-  {
-    title: "Explainable AI for Medical Diagnoses",
-    description: "Develop machine learning models that not only predict medical conditions but provide clear explanations for their diagnoses that medical professionals can understand and verify.",
-    score: 9.2,
-    category: "Healthcare AI",
-    novelty: 0.92,
-    feasibility: 0.81
-  },
-  {
-    title: "Sustainable Computing Framework",
-    description: "Create a framework to measure and optimize the environmental impact of computation, including energy usage, carbon footprint, and hardware lifecycle considerations.",
-    score: 8.5,
-    category: "Green Computing",
-    novelty: 0.85,
-    feasibility: 0.79
-  }
-];
+// Mock data removed to ensure real API data is used
 
 // Animation variants for elements
 const containerVariants = {
@@ -117,6 +90,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false);
   const [numIdeas, setNumIdeas] = useState(5);
   const [errorMessage, setErrorMessage] = useState('');
+  // Always set to false to ensure real data is used
   const [useMockData, setUseMockData] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
   const [recentGenerations, setRecentGenerations] = useState(0);
@@ -193,33 +167,6 @@ export default function DashboardPage() {
     
     setLoading(true);
     setErrorMessage('');
-    
-    if (useMockData) {
-      // Use mock data instead of API call
-      setTimeout(() => {
-        // Generate a random subset of ideas based on numIdeas
-        const mockIdeasSubset = [...MOCK_IDEAS];
-        // Add more dynamic mock ideas based on the prompt
-        if (numIdeas > mockIdeasSubset.length) {
-          for (let i = mockIdeasSubset.length; i < numIdeas; i++) {
-            const noveltyScore = Math.round((7 + Math.random() * 3) * 10) / 100;
-            const feasibilityScore = Math.round((6 + Math.random() * 4) * 10) / 100;
-            
-            mockIdeasSubset.push({
-              title: `${prompt} Research Direction ${i+1}`,
-              description: `This research direction explores ${prompt.toLowerCase()} with a focus on innovative approaches and methodologies.`,
-              score: Math.round((7 + Math.random() * 3) * 10) / 10,
-              category: ["AI", "Machine Learning", "Data Science", "Healthcare", "Quantum Computing"][Math.floor(Math.random() * 5)],
-              novelty: noveltyScore,
-              feasibility: feasibilityScore
-            });
-          }
-        }
-        setIdeas(mockIdeasSubset.slice(0, numIdeas));
-        setLoading(false);
-      }, 1500); // Simulate API delay
-      return;
-    }
     
     try {
       const response = await generateIdeas({
@@ -692,37 +639,7 @@ export default function DashboardPage() {
               </motion.div>
               
               {/* API/Mock toggle with better design */}
-              <motion.div 
-                variants={itemVariants}
-                className="p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700"
-              >
-                <div className="flex items-start">
-                  <span className="relative inline-flex mr-3 mt-0.5">
-                    <input
-                      type="checkbox"
-                      id="useMockData"
-                      checked={useMockData}
-                      onChange={() => setUseMockData(!useMockData)}
-                      className="h-4 w-4 text-blue-600 rounded border-gray-300 dark:border-gray-600"
-                    />
-                    {useMockData && (
-                      <span className="absolute top-0 left-0 h-full w-full flex items-center justify-center">
-                        <span className="h-2 w-2 bg-blue-600 dark:bg-blue-500 rounded-full"></span>
-                      </span>
-                    )}
-                  </span>
-                  <div>
-                    <label htmlFor="useMockData" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Use demo data
-                    </label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {useMockData 
-                        ? "Using demo data for quick testing" 
-                        : "Using production API for real results"}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
+              {/* Demo data checkbox removed to ensure real data is always used */}
               
               <motion.button
                 variants={itemVariants}
@@ -927,7 +844,10 @@ export default function DashboardPage() {
         >
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Recommended Research Directions</h2>
-            <button className="text-sm text-indigo-600 dark:text-indigo-400 flex items-center">
+            <button 
+              className="text-sm text-indigo-600 dark:text-indigo-400 flex items-center"
+              onClick={() => router.push('/ideas')}
+            >
               View all
               <ChevronRight className="h-4 w-4 ml-1" />
             </button>
@@ -951,7 +871,14 @@ export default function DashboardPage() {
                 color: "from-blue-400 to-cyan-500"
               }
             ].map((item, i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all cursor-pointer">
+              <div 
+                key={i} 
+                className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all cursor-pointer"
+                onClick={() => {
+                  // Navigate to ideas page with the selected idea prefilled
+                  router.push(`/ideas?idea=${encodeURIComponent(item.title)}`);
+                }}
+              >
                 <div className={`h-8 w-8 rounded-full bg-gradient-to-r ${item.color} flex items-center justify-center text-white mb-3`}>
                   {item.icon}
                 </div>

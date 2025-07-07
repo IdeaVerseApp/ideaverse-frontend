@@ -890,7 +890,17 @@ export default function IdeaDetailPage() {
                       <div className="mb-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                         <Accordion type="single" collapsible className="w-full">
                           <AccordionItem value="analytics" className="border-none">
-                            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                            <AccordionTrigger
+                              className="px-6 py-4 hover:no-underline"
+                              onClick={() => {
+                                // Give the accordion time to expand before recalculating chart sizes
+                                setTimeout(() => {
+                                  if (typeof window !== 'undefined') {
+                                    window.dispatchEvent(new Event('resize'));
+                                  }
+                                }, 350);
+                              }}
+                            >
                               <div className="flex items-center">
                                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center mr-4">
                                   <TrendingUp className="h-5 w-5 text-white" />

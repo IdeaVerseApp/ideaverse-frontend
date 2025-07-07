@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen, ChevronDown, Code, FileText, LayoutDashboard, Lightbulb, LogOut, Menu, Search, Settings, User, History } from "lucide-react"
+import { BookOpen, ChevronDown, Code, FileText, LayoutDashboard, Lightbulb, LogOut, Menu, Search, User, History } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useAuth } from "@/context/AuthContext"
@@ -82,7 +82,6 @@ export default function Sidebar({
     { name: "Code", href: "/code", icon: Code },
     { name: "Papers", href: "/paper", icon: BookOpen },
     { name: "Profile", href: "/userprofile", icon: User },
-    { name: "Settings", href: "/settings", icon: Settings },
   ]
 
   return (
@@ -138,8 +137,6 @@ export default function Sidebar({
         </button>
       </div>
 
-
-
       <nav className="flex-1 overflow-y-auto p-2">
         <div className="space-y-1">
           {navigation.map((item) => {
@@ -152,20 +149,18 @@ export default function Sidebar({
                     onClick={toggleIdeasDropdown}
                     className={`flex items-center px-3 py-2 text-sm rounded-md w-full ${
                       sidebarOpen ? 'justify-between' : 'justify-center'
-                    } ${isActive ? "bg-gray-100 dark:bg-gray-800" : "hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+                    } bg-blue-600/90 hover:bg-blue-600 dark:bg-blue-700/80 dark:hover:bg-blue-700`}
                     title={!sidebarOpen ? item.name : undefined}
                   >
                     <div className="flex items-center">
                       <item.icon
-                        className={`h-5 w-5 ${sidebarOpen ? 'mr-3' : ''} ${
-                          isActive ? "text-blue-700 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"
-                        }`}
+                        className={`h-5 w-5 ${sidebarOpen ? 'mr-3' : ''} text-white dark:text-white`}
                       />
-                      {sidebarOpen && <span className="dark:text-gray-200">{item.name}</span>}
+                      {sidebarOpen && <span className="text-white dark:text-white font-semibold">{item.name}</span>}
                     </div>
                     {sidebarOpen && (
                       <ChevronDown 
-                        className={`h-4 w-4 text-gray-500 dark:text-gray-400 transition-transform ${
+                        className={`h-4 w-4 text-white dark:text-white transition-transform ${
                           isIdeasDropdownOpen ? 'rotate-180' : ''
                         }`} 
                       />
@@ -176,16 +171,16 @@ export default function Sidebar({
                     <div className="ml-9 mt-1 space-y-1">
                       <Link
                         href="/ideas"
-                        className={`flex items-center px-3 py-2 text-sm rounded-md w-full hover:bg-gray-100 dark:hover:bg-gray-800 ${
-                          pathname === "/ideas" ? "bg-gray-100 dark:bg-gray-800 text-blue-700 dark:text-blue-400" : "text-gray-600 dark:text-gray-300"
+                        className={`flex items-center px-3 py-2 text-sm rounded-md w-full hover:bg-blue-700/10 dark:hover:bg-blue-700/30 ${
+                          pathname === "/ideas" ? "bg-blue-700/10 dark:bg-blue-700/30 text-blue-700 dark:text-blue-300" : "text-blue-100 dark:text-blue-200"
                         }`}
                       >
                         <span>Create New Idea</span>
                       </Link>
                       <Link
                         href="/ideas/generated"
-                        className={`flex items-center px-3 py-2 text-sm rounded-md w-full hover:bg-gray-100 dark:hover:bg-gray-800 ${
-                          pathname === "/ideas/generated" ? "bg-gray-100 dark:bg-gray-800 text-blue-700 dark:text-blue-400" : "text-gray-600 dark:text-gray-300"
+                        className={`flex items-center px-3 py-2 text-sm rounded-md w-full hover:bg-blue-700/10 dark:hover:bg-blue-700/30 ${
+                          pathname === "/ideas/generated" ? "bg-blue-700/10 dark:bg-blue-700/30 text-blue-700 dark:text-blue-300" : "text-blue-100 dark:text-blue-200"
                         }`}
                       >
                         <span>Generated Ideas</span>
@@ -210,7 +205,14 @@ export default function Sidebar({
                     isActive ? "text-blue-700 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"
                   }`}
                 />
-                {sidebarOpen && <span className="dark:text-gray-200">{item.name}</span>}
+                {sidebarOpen && (
+                  <>
+                    <span className="dark:text-gray-200 mr-2">{item.name}</span>
+                    {(item.name === "Code" || item.name === "Papers") && (
+                      <span className="text-xs rounded-full bg-yellow-200 text-yellow-900 px-2 py-0.5 font-semibold">Upcoming</span>
+                    )}
+                  </>
+                )}
               </Link>
             )
           })}
@@ -228,7 +230,7 @@ export default function Sidebar({
               <span className="text-sm">{userInitial}</span>
             </button>
             {sidebarOpen && (
-              <div className="ml-2 truncate">
+              <div className="ml-2">
                 <div className="text-sm font-medium text-gray-800 dark:text-gray-200">{userName}</div>
               </div>
             )}

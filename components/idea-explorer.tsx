@@ -11,15 +11,16 @@ import { motion } from "framer-motion"
 
 interface IdeaExplorerProps {
   ideaId?: string | number
+  initialIdea?: string
 }
 
 type GenerationMethod = "auto" | "reverse-spark" | "idea-chain" | "diamond-mine"
 
-export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
+export default function IdeaExplorer({ ideaId, initialIdea }: IdeaExplorerProps) {
   const router = useRouter()
   const { experiment, setExperiment } = useIdea()
   const { isAuthenticated } = useAuth()
-  const [researchIdea, setResearchIdea] = useState(experiment)
+  const [researchIdea, setResearchIdea] = useState(initialIdea || experiment)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [numIdeas, setNumIdeas] = useState(2)
@@ -49,6 +50,13 @@ export default function IdeaExplorer({ ideaId }: IdeaExplorerProps) {
   useEffect(() => {
     setCatchyLine(catchyLines[Math.floor(Math.random() * catchyLines.length)])
   }, [])
+
+  // Set research idea from props when it changes
+  useEffect(() => {
+    if (initialIdea) {
+      setResearchIdea(initialIdea)
+    }
+  }, [initialIdea])
 
   // Auto-resize textarea based on content
   useEffect(() => {

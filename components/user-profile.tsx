@@ -23,17 +23,34 @@ export default function UserProfile({ userData }: UserProfileProps) {
   const userInitial = userName.charAt(0)
   const joinDate = userInfo?.joinDate
     ? new Date(userInfo.joinDate).toLocaleDateString("en-US", { month: "long", year: "numeric" })
-    : "March 2024"
+    : "Recently joined"
   const researchIdeas = userData?.researchIdeas || []
 
   // Calculate metrics
   const totalIdeas = researchIdeas.length
+  const papersCount = researchIdeas.filter(idea => idea.paper).length
+  const codeProjectsCount = researchIdeas.filter(idea => idea.code && idea.code.length > 0).length
+  
+  // Count unique collaborators across all ideas
+  const collaboratorsSet = new Set()
+  researchIdeas.forEach(idea => {
+    if (idea.collaborators && Array.isArray(idea.collaborators)) {
+      idea.collaborators.forEach(collaborator => {
+        if (collaborator) collaboratorsSet.add(collaborator)
+      })
+    }
+  })
+  const collaboratorsCount = collaboratorsSet.size
+  
   const avgNovelty = researchIdeas.length > 0 
-    ? researchIdeas.reduce((sum, idea) => sum + idea.novelty, 0) / researchIdeas.length 
+    ? researchIdeas.reduce((sum, idea) => sum + (idea.novelty || 0), 0) / researchIdeas.length 
     : 0
   const avgInterestingness = researchIdeas.length > 0
-    ? researchIdeas.reduce((sum, idea) => sum + idea.interestingness, 0) / researchIdeas.length
+    ? researchIdeas.reduce((sum, idea) => sum + (idea.interestingness || 0), 0) / researchIdeas.length
     : 0
+
+  // Get unique categories from research ideas
+  const uniqueCategories = Array.from(new Set(researchIdeas.map(idea => idea.category).filter(Boolean)))
 
   return (
     <div className="relative">
@@ -84,7 +101,7 @@ export default function UserProfile({ userData }: UserProfileProps) {
                       <BookOpen className="w-4 h-4 mr-2" />
                       Research fields
                     </span>
-                    <span className="font-medium text-gray-900 dark:text-white">{new Set(researchIdeas.map((idea) => idea.category)).size || "0"}</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{uniqueCategories.length || "0"}</span>
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="text-gray-600 dark:text-gray-400 flex items-center">
@@ -107,16 +124,17 @@ export default function UserProfile({ userData }: UserProfileProps) {
               </h3>
               
               <div className="flex flex-wrap gap-2 relative z-10">
-                {Array.from(new Set(researchIdeas.map((idea) => idea.category))).map((category, index) => (
-                  <span key={index} className="px-3 py-1 bg-blue-100/50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-full text-sm text-blue-700 dark:text-blue-300">
-                    {category || "Research"}
-                  </span>
-                ))}
-                {researchIdeas.length === 0 && (
+                {uniqueCategories.length > 0 ? (
+                  uniqueCategories.map((category, index) => (
+                    <span key={index} className="px-3 py-1 bg-blue-100/50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-full text-sm text-blue-700 dark:text-blue-300">
+                      {category}
+                    </span>
+                  ))
+                ) : (
                   <>
-                    <span className="px-3 py-1 bg-blue-100/50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-full text-sm text-blue-700 dark:text-blue-300">Machine Learning</span>
-                    <span className="px-3 py-1 bg-blue-100/50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-full text-sm text-blue-700 dark:text-blue-300">Quantum Computing</span>
-                    <span className="px-3 py-1 bg-blue-100/50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-full text-sm text-blue-700 dark:text-blue-300">Bioinformatics</span>
+                    <span className="px-3 py-1 bg-gray-100/50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-sm text-gray-500 dark:text-gray-400">
+                      No research interests yet
+                    </span>
                   </>
                 )}
               </div>
@@ -147,7 +165,7 @@ export default function UserProfile({ userData }: UserProfileProps) {
                   <div className="flex justify-center mb-2">
                     <FileText className="h-7 w-7 text-blue-500 dark:text-blue-400" />
                   </div>
-                  <div className="text-2xl font-bold text-center text-blue-700 dark:text-blue-300">{researchIdeas.filter((idea) => idea.paper).length}</div>
+                  <div className="text-2xl font-bold text-center text-blue-700 dark:text-blue-300">{papersCount}</div>
                   <div className="text-sm text-center text-blue-600 dark:text-blue-400">Research Papers</div>
                 </div>
 
@@ -155,9 +173,7 @@ export default function UserProfile({ userData }: UserProfileProps) {
                   <div className="flex justify-center mb-2">
                     <Code className="h-7 w-7 text-blue-500 dark:text-blue-400" />
                   </div>
-                  <div className="text-2xl font-bold text-center text-blue-700 dark:text-blue-300">
-                    {researchIdeas.filter((idea) => idea.code && idea.code.length > 0).length}
-                  </div>
+                  <div className="text-2xl font-bold text-center text-blue-700 dark:text-blue-300">{codeProjectsCount}</div>
                   <div className="text-sm text-center text-blue-600 dark:text-blue-400">Code Projects</div>
                 </div>
 
@@ -165,7 +181,7 @@ export default function UserProfile({ userData }: UserProfileProps) {
                   <div className="flex justify-center mb-2">
                     <Users className="h-7 w-7 text-blue-500 dark:text-blue-400" />
                   </div>
-                  <div className="text-2xl font-bold text-center text-blue-700 dark:text-blue-300">{Math.min(5, Math.ceil(researchIdeas.length / 2)) || "0"}</div>
+                  <div className="text-2xl font-bold text-center text-blue-700 dark:text-blue-300">{collaboratorsCount || "0"}</div>
                   <div className="text-sm text-center text-blue-600 dark:text-blue-400">Collaborations</div>
                 </div>
               </div>
@@ -182,7 +198,7 @@ export default function UserProfile({ userData }: UserProfileProps) {
                   <div className="w-full bg-blue-200 dark:bg-slate-700/30 rounded-full h-2.5">
                     <div 
                       className="bg-gradient-to-r from-blue-500 to-slate-500 h-2.5 rounded-full" 
-                      style={{ width: `${avgNovelty * 10}%` }}
+                      style={{ width: `${Math.min(avgNovelty * 10, 100)}%` }}
                     ></div>
                   </div>
                 </div>
@@ -197,121 +213,73 @@ export default function UserProfile({ userData }: UserProfileProps) {
                   <div className="w-full bg-blue-200 dark:bg-slate-700/30 rounded-full h-2.5">
                     <div 
                       className="bg-gradient-to-r from-blue-500 to-slate-500 h-2.5 rounded-full" 
-                      style={{ width: `${avgInterestingness * 10}%` }}
+                      style={{ width: `${Math.min(avgInterestingness * 10, 100)}%` }}
                     ></div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Recent Activity */}
+            {/* Recent Research Ideas */}
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-6 relative overflow-hidden">
-              <div className="absolute -bottom-16 -right-8 w-40 h-40 bg-gradient-to-br from-slate-400/10 to-blue-400/10 blur-xl rounded-full"></div>
-              
-              <h2 className="text-xl font-bold mb-6 text-gray-900 dark:text-white flex items-center">
-                <Zap className="w-6 h-6 mr-2 text-blue-500 dark:text-blue-400" />
-                Recent Activity
+              <h2 className="text-xl font-bold mb-6 text-gray-900 dark:text-white flex items-center justify-between">
+                <span className="flex items-center">
+                  <Sparkles className="w-6 h-6 mr-2 text-blue-500 dark:text-blue-400" />
+                  Recent Research Ideas
+                </span>
               </h2>
 
-              <div className="space-y-4 relative z-10">
-                {researchIdeas.slice(0, 4).map((idea, index) => (
-                  <div key={index} className="p-4 bg-white/80 dark:bg-gray-700/80 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow group">
-                    <div className="flex items-start gap-3">
-                      {index % 2 === 0 ? (
-                        <Calendar className="h-5 w-5 text-blue-500 dark:text-blue-400 mt-0.5" />
-                      ) : (
-                        <Code className="h-5 w-5 text-slate-500 dark:text-slate-400 mt-0.5" />
+              {researchIdeas.length > 0 ? (
+                <div className="space-y-4">
+                  {researchIdeas.slice(0, 5).map((idea) => (
+                    <div key={idea.id} className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/10 dark:to-slate-900/10 border border-blue-100 dark:border-blue-900/30 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between">
+                        <h3 className="font-medium text-gray-900 dark:text-white">{idea.title}</h3>
+                        {idea.category && (
+                          <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
+                            {idea.category}
+                          </span>
+                        )}
+                      </div>
+                      {idea.experiment && (
+                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{idea.experiment}</p>
                       )}
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-900 dark:text-white">
-                          {index === 0
-                            ? `Generated research idea: ${idea.title}`
-                            : index === 1
-                              ? `Created code for ${idea.title}`
-                              : index === 2
-                                ? `Drafted research paper for ${idea.title}`
-                                : `Shared ${idea.title} with collaborators`}
-                        </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center mt-1">
-                          <Clock className="h-3.5 w-3.5 mr-1" /> {idea.date || "Recently"}
-                        </div>
-                      </div>
-                      <button className="text-blue-500 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ArrowRight className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                {researchIdeas.length === 0 && (
-                  <div className="p-4 bg-white/80 dark:bg-gray-700/80 rounded-lg border border-gray-200 dark:border-gray-600">
-                    <div className="flex items-start">
-                      <Calendar className="h-5 w-5 text-gray-400 mt-0.5 mr-3" />
-                      <div>
-                        <div className="font-medium text-gray-900 dark:text-white">No recent activity</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center mt-1">
-                          <Clock className="h-3.5 w-3.5 mr-1" /> Now
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Top Research Ideas */}
-            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-6 relative overflow-hidden">
-              <div className="absolute -top-16 -left-8 w-40 h-40 bg-gradient-to-br from-blue-400/10 to-slate-400/10 blur-xl rounded-full"></div>
-              
-              <h2 className="text-xl font-bold mb-6 text-gray-900 dark:text-white flex items-center">
-                <Star className="w-6 h-6 mr-2 text-blue-500 dark:text-blue-400" />
-                Top Research Ideas
-              </h2>
-
-              <div className="space-y-5 relative z-10">
-                {researchIdeas.slice(0, 3).map((idea, index) => (
-                  <div key={index} className="p-5 bg-gradient-to-r from-white/90 to-white/60 dark:from-gray-700/90 dark:to-gray-700/60 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow group">
-                    <div className="flex items-start gap-3">
-                      <div className="min-w-[3rem] h-12 rounded-md flex items-center justify-center bg-gradient-to-br from-blue-500 to-slate-600 text-white font-bold text-lg">
-                        {(idea.novelty + idea.interestingness) / 2 > 7 ? "A+" : 
-                          (idea.novelty + idea.interestingness) / 2 > 5 ? "A" : "B+"}
-                      </div>
-                      
-                      <div className="flex-1">
-                        <h3 className="font-medium text-lg text-gray-900 dark:text-white mb-1">{idea.title}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">{idea.experiment}</p>
-                        <div className="flex flex-wrap gap-3 text-xs">
-                          <div className="flex items-center text-blue-600 dark:text-blue-400">
-                            <Sparkles className="h-3.5 w-3.5 mr-1" />
-                            <span>Novelty: {idea.novelty.toFixed(1)}</span>
-                          </div>
-                          <div className="flex items-center text-slate-600 dark:text-slate-400">
-                            <Flame className="h-3.5 w-3.5 mr-1" />
-                            <span>Interest: {idea.interestingness.toFixed(1)}</span>
-                          </div>
-                          {idea.category && (
-                            <div className="flex items-center text-blue-600 dark:text-blue-400">
-                              <BookOpen className="h-3.5 w-3.5 mr-1" />
-                              <span>{idea.category}</span>
-                            </div>
+                      <div className="mt-3 flex items-center justify-between">
+                        <div className="flex items-center space-x-4 text-xs">
+                          {idea.novelty > 0 && (
+                            <span className="flex items-center text-blue-600 dark:text-blue-400">
+                              <Zap className="w-3 h-3 mr-1" /> Novelty: {idea.novelty.toFixed(1)}
+                            </span>
+                          )}
+                          {idea.date && (
+                            <span className="text-gray-500 dark:text-gray-400">{idea.date}</span>
                           )}
                         </div>
+                        {(idea.paper || (idea.code && idea.code.length > 0)) && (
+                          <div className="flex items-center space-x-2">
+                            {idea.paper && (
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
+                                <FileText className="w-3 h-3 inline" /> Paper
+                              </span>
+                            )}
+                            {idea.code && idea.code.length > 0 && (
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
+                                <Code className="w-3 h-3 inline" /> Code
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      
-                      <button className="text-blue-500 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ArrowRight className="h-4 w-4" />
-                      </button>
                     </div>
-                  </div>
-                ))}
-
-                {researchIdeas.length === 0 && (
-                  <div className="p-5 bg-gradient-to-r from-white/90 to-white/60 dark:from-gray-700/90 dark:to-gray-700/60 rounded-lg border border-gray-200 dark:border-gray-600">
-                    <h3 className="font-medium text-gray-900 dark:text-white mb-2">No saved research ideas</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">Start exploring ideas to see them here.</p>
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
+                  <Sparkles className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400 mb-2">No research ideas yet</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-500">Generate some ideas to start building your portfolio</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

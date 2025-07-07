@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser({
             id: session.user.id as string,
             email: session.user.email as string,
-            username: session.user.name as string,
+            username: (session.user as any).username || session.user.email?.split("@")[0] || session.user.name,
             full_name: session.user.name as string,
           })
           setLoading(false)
@@ -124,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser({
           id: session.user.id as string,
           email: session.user.email as string,
-          username: session.user.name as string,
+          username: (session.user as any).username || session.user.email?.split("@")[0] || session.user.name,
           full_name: session.user.name as string,
         });
         return true;

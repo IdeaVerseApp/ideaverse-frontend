@@ -11,6 +11,7 @@ export interface ResearchIdea {
   paper: string
   category?: string
   date?: string
+  collaborators?: string[]
 }
 
 export interface PersonalInformation {

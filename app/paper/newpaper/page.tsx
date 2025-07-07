@@ -42,8 +42,8 @@ export default function NewPaperPage() {
   const [activePaperSection, setActivePaperSection] = useState<string>("abstract")
   const { isAuthenticated, user } = useAuth()
   const [userData, setUserData] = useState({
-    name: isAuthenticated && user ? (user.username || user.full_name || user.email) : "Guest User",
-    initial: isAuthenticated && user ? (user.username || user.full_name || user.email).charAt(0) : "G",
+    name: isAuthenticated && user ? (user.full_name || user.username || user.email) : "Guest User",
+    initial: isAuthenticated && user ? (user.full_name || user.username || user.email).charAt(0) : "G",
   })
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [paperTitle, setPaperTitle] = useState("")

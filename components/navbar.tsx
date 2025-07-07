@@ -4,7 +4,6 @@ import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import { usePathname } from "next/navigation"
 import { Menu, X } from "lucide-react"
-import { ThemeToggle } from "./ui/theme-toggle"
 
 interface NavbarProps {
   userName?: string | null;
@@ -51,9 +50,6 @@ export default function Navbar({ userName, userInitial, sidebarOpen, setSidebarO
         </div>
 
         <div className="flex items-center space-x-4">
-          {/* Theme Toggle */}
-          <ThemeToggle />
-          
           {isAuthenticated && userName && userInitial && (
             <div className="flex items-center">
               <div className="h-8 w-8 bg-blue-500 rounded-full flex items-center justify-center text-white">

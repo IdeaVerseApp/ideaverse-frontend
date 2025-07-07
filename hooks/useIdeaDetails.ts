@@ -38,6 +38,7 @@ export const useIdeaDetails = (ideaId: string, isAuthenticated: boolean, authLoa
             
             if (data.status === "completed" || data.status === "failed") {
               sse.close();
+              router.refresh();
             }
           };
           
