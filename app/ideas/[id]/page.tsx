@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { Loader2, ArrowLeft, Download, BookOpen, RefreshCw, ExternalLink, ChevronDown, ChevronRight, Star, TrendingUp, Database, Target, Globe, Clock } from "lucide-react"
+import { Loader2, ArrowLeft, Download, BookOpen, RefreshCw, ExternalLink, ChevronDown, ChevronRight, Star, TrendingUp, Database, Target, Globe, Clock, Info } from "lucide-react"
 import Footer from "@/components/footer"
 import Navbar from "@/components/navbar"
 import Sidebar from "@/components/sidebar"
@@ -17,16 +17,13 @@ import FollowupQuestionCards from "@/components/followup-question-cards"
 import type { IdeaDetail, FollowUpQuestion, FollowUpAnswer, IdeaFeedback, IdeaItem } from "@/types/idea"
 import { downloadIdeaAsPdf } from "@/lib/pdf"
 import { useIdeaDetails } from "@/hooks/useIdeaDetails"
-import { getElapsedTime, getDurationBetween, getSourceBubbleClass, getSourceHomepage } from "@/lib/utils"
+import { getElapsedTime, getDurationBetween, getSourceBubbleClass, getSourceHomepage, formatUserDisplayName, getUserInitials } from "@/lib/utils"
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-// Import recharts components via our wrapper to avoid SSR issues
-import { ResponsiveContainer, PieChart, Pie, Cell, Bar, XAxis, YAxis } from '@/components/recharts'
-import { BarChart as RechartsBarChart } from '@/components/recharts'
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
@@ -36,6 +33,47 @@ const LitMapDiagram = dynamic(() => import("@/components/LitMapDiagram"), {
   ssr: false,
   loading: () => <p>Loading diagram...</p>,
 })
+
+// Import Chart.js components - much more stable and production-ready
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip as ChartTooltip,
+  Legend as ChartLegend,
+} from 'chart.js'
+import { Bar, Pie } from 'react-chartjs-2'
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Title,
+  ChartTooltip,
+  ChartLegend
+)
+
+// Client-side chart wrapper for extra safety
+const ClientSafeChart = ({ children }: { children: React.ReactNode }) => {
+  const [isClient, setIsClient] = useState(false)
+  
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+  
+  if (!isClient) {
+    return <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">
+      <div className="animate-pulse">Loading chart...</div>
+    </div>
+  }
+  
+  return <>{children}</>
+}
 
 export default function IdeaDetailPage() {
   const router = useRouter()
@@ -287,7 +325,7 @@ export default function IdeaDetailPage() {
             personalInformation: [
               {
                 id: 1,
-                name: user.full_name || user.username || user.email,
+                name: formatUserDisplayName(user),
                 email: user.email,
                 role: "Researcher",
                 institution: "Research Institution",
@@ -328,7 +366,7 @@ export default function IdeaDetailPage() {
 
   // Get user information
   const userName = userData?.personalInformation[0]?.name || "Researcher"
-  const userInitial = userName.charAt(0)
+  const userInitial = getUserInitials(user)
 
   const handleBackClick = () => {
     router.push("/ideas/generated");
@@ -487,6 +525,27 @@ export default function IdeaDetailPage() {
       );
     }
     return text;
+  };
+
+  // Helper functions for score tooltips
+  const getScoreExplanation = (scoreType: string) => {
+    const explanations = {
+      acceptance_probability: "Likelihood of acceptance at top-tier peer-reviewed venues",
+      feasibility: "How practical and achievable the research is to execute",
+      novelty: "How original and distinct the idea is from existing work",
+      impact: "Potential real-world significance and advancement to the field"
+    };
+    return explanations[scoreType as keyof typeof explanations] || "";
+  };
+
+  const getScoreJustification = (ideaItem: any, scoreType: string) => {
+    const justifications = {
+      acceptance_probability: ideaItem.acceptance_probability?.justification || "This score represents the estimated likelihood of acceptance at top-tier academic conferences and journals based on novelty, feasibility, and impact assessment.",
+      feasibility: ideaItem.feasibility?.justification || "This score evaluates the practical aspects of implementing the research, including resource requirements, technical complexity, and execution timeline.",
+      novelty: ideaItem.novelty?.justification || "This score measures how original and distinct the research idea is compared to existing literature and previous work in the field.",
+      impact: ideaItem.impact?.justification || "This score assesses the potential significance and contribution of the research to scientific advancement and real-world applications."
+    };
+    return justifications[scoreType as keyof typeof justifications] || "";
   };
 
   if (loading || authLoading) {
@@ -961,13 +1020,57 @@ export default function IdeaDetailPage() {
                                       Publication Years
                                     </h3>
                                     {yearChartData.length > 0 ? (
-                                      <ResponsiveContainer width="100%" height={200}>
-                                        <RechartsBarChart data={yearChartData}>
-                                          <XAxis dataKey="year" tick={{ fontSize: 12 }} />
-                                          <YAxis tick={{ fontSize: 12 }} />
-                                          <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                                        </RechartsBarChart>
-                                      </ResponsiveContainer>
+                                      <ClientSafeChart>
+                                        <div className="w-full h-[200px]">
+                                          <Bar
+                                            data={{
+                                              labels: yearChartData.map(item => item.year),
+                                              datasets: [
+                                                {
+                                                  label: 'Publications',
+                                                  data: yearChartData.map(item => item.count),
+                                                  backgroundColor: '#6366f1',
+                                                  borderColor: '#4f46e5',
+                                                  borderWidth: 1,
+                                                  borderRadius: 4,
+                                                  borderSkipped: false,
+                                                },
+                                              ],
+                                            }}
+                                            options={{
+                                              responsive: true,
+                                              maintainAspectRatio: false,
+                                              plugins: {
+                                                legend: {
+                                                  display: false,
+                                                },
+                                              },
+                                              scales: {
+                                                x: {
+                                                  grid: {
+                                                    display: false,
+                                                  },
+                                                  ticks: {
+                                                    font: {
+                                                      size: 12,
+                                                    },
+                                                  },
+                                                },
+                                                y: {
+                                                  grid: {
+                                                    color: 'rgba(0, 0, 0, 0.1)',
+                                                  },
+                                                  ticks: {
+                                                    font: {
+                                                      size: 12,
+                                                    },
+                                                  },
+                                                },
+                                              },
+                                            }}
+                                          />
+                                        </div>
+                                      </ClientSafeChart>
                                     ) : (
                                       <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">
                                         <p>No publication year data available</p>
@@ -982,41 +1085,57 @@ export default function IdeaDetailPage() {
                                       Research Sources
                                     </h3>
                                     {sourceChartData.length > 0 ? (
-                                      <div className="flex items-center">
-                                        <ResponsiveContainer width="60%" height={200}>
-                                          <PieChart>
+                                      <ClientSafeChart>
+                                        <div className="flex items-center">
+                                          <div className="w-[60%] h-[200px]">
                                             <Pie
-                                              data={sourceChartData}
-                                              cx="50%"
-                                              cy="50%"
-                                              outerRadius={80}
-                                              dataKey="count"
-                                              label={false}
-                                            >
-                                              {sourceChartData.map((entry, index) => (
-                                                <Cell 
-                                                  key={`cell-${index}`} 
-                                                  fill={sourceColors[entry.source as keyof typeof sourceColors] || sourceColors.Unknown} 
+                                              data={{
+                                                labels: sourceChartData.map(item => item.source),
+                                                datasets: [
+                                                  {
+                                                    data: sourceChartData.map(item => item.count),
+                                                    backgroundColor: sourceChartData.map(item => 
+                                                      sourceColors[item.source as keyof typeof sourceColors] || sourceColors.Unknown
+                                                    ),
+                                                    borderWidth: 2,
+                                                    borderColor: '#ffffff',
+                                                  },
+                                                ],
+                                              }}
+                                              options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: {
+                                                  legend: {
+                                                    display: false,
+                                                  },
+                                                  tooltip: {
+                                                    callbacks: {
+                                                      label: function(context) {
+                                                        return `${context.label}: ${context.parsed}`;
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                              }}
+                                            />
+                                          </div>
+                                          <div className="w-[40%] pl-4 space-y-2">
+                                            {sourceChartData.map((item, index) => (
+                                              <div key={item.source} className="flex items-center text-sm">
+                                                <div 
+                                                  className="w-3 h-3 rounded-full mr-2" 
+                                                  style={{ 
+                                                    backgroundColor: sourceColors[item.source as keyof typeof sourceColors] || sourceColors.Unknown 
+                                                  }}
                                                 />
-                                              ))}
-                                            </Pie>
-                                          </PieChart>
-                                        </ResponsiveContainer>
-                                        <div className="w-40% pl-4 space-y-2">
-                                          {sourceChartData.map((item, index) => (
-                                            <div key={item.source} className="flex items-center text-sm">
-                                              <div 
-                                                className="w-3 h-3 rounded-full mr-2" 
-                                                style={{ 
-                                                  backgroundColor: sourceColors[item.source as keyof typeof sourceColors] || sourceColors.Unknown 
-                                                }}
-                                              />
-                                              <span className="text-gray-700 dark:text-gray-300 flex-1">{item.source}</span>
-                                              <span className="text-gray-500 dark:text-gray-400 font-medium">{item.count}</span>
-                                            </div>
-                                          ))}
+                                                <span className="text-gray-700 dark:text-gray-300 flex-1">{item.source}</span>
+                                                <span className="text-gray-500 dark:text-gray-400 font-medium">{item.count}</span>
+                                              </div>
+                                            ))}
+                                          </div>
                                         </div>
-                                      </div>
+                                      </ClientSafeChart>
                                     ) : (
                                       <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">
                                         <p>No source data available</p>
@@ -1100,18 +1219,66 @@ export default function IdeaDetailPage() {
                               
                               <div className="flex items-center justify-end gap-3 ml-auto">
                                 <div className="flex flex-wrap justify-end gap-2">
-                                  <div className="px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-medium flex items-center gap-1.5 shadow-sm">
-                                    <div className="h-2 w-2 rounded-full bg-blue-500 dark:bg-blue-400"></div>
-                                    <span>Interestingness: {(ideaItem.interestingness || ideaItem.Interestingness || 0).toFixed(1)}</span>
-                                  </div>
-                                  <div className="px-3 py-1.5 rounded-full bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-sm font-medium flex items-center gap-1.5 shadow-sm">
-                                    <div className="h-2 w-2 rounded-full bg-green-500 dark:bg-green-400"></div>
-                                    <span>Feasibility: {(ideaItem.feasibility?.score || ideaItem.Feasibility || 0).toFixed(1)}</span>
-                                  </div>
-                                  <div className="px-3 py-1.5 rounded-full bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm font-medium flex items-center gap-1.5 shadow-sm">
-                                    <div className="h-2 w-2 rounded-full bg-purple-500 dark:bg-purple-400"></div>
-                                    <span>Novelty: {(ideaItem.novelty?.score || ideaItem.Novelty || 0).toFixed(1)}</span>
-                                  </div>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-medium flex items-center gap-1.5 shadow-sm cursor-help">
+                                          <div className="h-2 w-2 rounded-full bg-blue-500 dark:bg-blue-400"></div>
+                                          <span>Acceptance: {(ideaItem.acceptance_probability?.score || 0).toFixed(1)}</span>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-sm p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-lg">
+                                        <div className="space-y-2">
+                                          <h4 className="font-semibold text-gray-900 dark:text-white text-sm">Acceptance Probability</h4>
+                                          <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{getScoreExplanation('acceptance_probability')}</p>
+                                          <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">AI Assessment:</p>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{getScoreJustification(ideaItem, 'acceptance_probability')}</p>
+                                          </div>
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="px-3 py-1.5 rounded-full bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-sm font-medium flex items-center gap-1.5 shadow-sm cursor-help">
+                                          <div className="h-2 w-2 rounded-full bg-green-500 dark:bg-green-400"></div>
+                                          <span>Feasibility: {(ideaItem.feasibility?.score || ideaItem.Feasibility || 0).toFixed(1)}</span>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-sm p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-lg">
+                                        <div className="space-y-2">
+                                          <h4 className="font-semibold text-gray-900 dark:text-white text-sm">Feasibility Score</h4>
+                                          <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{getScoreExplanation('feasibility')}</p>
+                                          <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">AI Assessment:</p>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{getScoreJustification(ideaItem, 'feasibility')}</p>
+                                          </div>
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="px-3 py-1.5 rounded-full bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm font-medium flex items-center gap-1.5 shadow-sm cursor-help">
+                                          <div className="h-2 w-2 rounded-full bg-purple-500 dark:bg-purple-400"></div>
+                                          <span>Novelty: {(ideaItem.novelty?.score || ideaItem.Novelty || 0).toFixed(1)}</span>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-sm p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-lg">
+                                        <div className="space-y-2">
+                                          <h4 className="font-semibold text-gray-900 dark:text-white text-sm">Novelty Score</h4>
+                                          <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{getScoreExplanation('novelty')}</p>
+                                          <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">AI Assessment:</p>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{getScoreJustification(ideaItem, 'novelty')}</p>
+                                          </div>
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 </div>
                                 <div className="text-gray-400 dark:text-gray-500">
                                   {expandedIdeas[index] ? (
@@ -1240,25 +1407,82 @@ export default function IdeaDetailPage() {
                                   </div>
                                 )}
                                 
-                                {/* Scores: Interestingness, Feasibility, Novelty */}
+                                {/* Scores: Acceptance Probability, Feasibility, Novelty */}
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                                  {/* Interestingness */}
+                                  {/* Acceptance Probability */}
                                   <div className="bg-card dark:bg-card border border-border dark:border-border p-4 rounded-xl shadow-sm text-center">
-                                    <p className="text-sm font-medium text-primary dark:text-primary mb-1">Interestingness</p>
+                                    <div className="flex items-center justify-center gap-2 mb-1">
+                                      <p className="text-sm font-medium text-primary dark:text-primary">Acceptance Probability</p>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                                          </TooltipTrigger>
+                                          <TooltipContent className="max-w-sm p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-lg">
+                                            <div className="space-y-2">
+                                              <h4 className="font-semibold text-gray-900 dark:text-white text-sm">Acceptance Probability</h4>
+                                              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{getScoreExplanation('acceptance_probability')}</p>
+                                              <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">AI Assessment:</p>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{getScoreJustification(ideaItem, 'acceptance_probability')}</p>
+                                              </div>
+                                            </div>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </div>
                                     <p className="text-4xl font-bold text-foreground dark:text-foreground">
-                                      {(ideaItem.interestingness || ideaItem.Interestingness || 0).toFixed(1)}
+                                      {(ideaItem.acceptance_probability?.score || 0).toFixed(1)}
                                     </p>
                                   </div>
                                   {/* Feasibility */}
                                   <div className="bg-card dark:bg-card border border-border dark:border-border p-4 rounded-xl shadow-sm text-center">
-                                    <p className="text-sm font-medium text-primary dark:text-primary mb-1">Feasibility</p>
+                                    <div className="flex items-center justify-center gap-2 mb-1">
+                                      <p className="text-sm font-medium text-primary dark:text-primary">Feasibility</p>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                                          </TooltipTrigger>
+                                          <TooltipContent className="max-w-sm p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-lg">
+                                            <div className="space-y-2">
+                                              <h4 className="font-semibold text-gray-900 dark:text-white text-sm">Feasibility Score</h4>
+                                              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{getScoreExplanation('feasibility')}</p>
+                                              <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">AI Assessment:</p>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{getScoreJustification(ideaItem, 'feasibility')}</p>
+                                              </div>
+                                            </div>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </div>
                                     <p className="text-4xl font-bold text-foreground dark:text-foreground">
                                       {(ideaItem.feasibility?.score || ideaItem.Feasibility || 0).toFixed(1)}
                                     </p>
                                   </div>
                                   {/* Novelty */}
                                   <div className="bg-card dark:bg-card border border-border dark:border-border p-4 rounded-xl shadow-sm text-center">
-                                    <p className="text-sm font-medium text-primary dark:text-primary mb-1">Novelty</p>
+                                    <div className="flex items-center justify-center gap-2 mb-1">
+                                      <p className="text-sm font-medium text-primary dark:text-primary">Novelty</p>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                                          </TooltipTrigger>
+                                          <TooltipContent className="max-w-sm p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-lg">
+                                            <div className="space-y-2">
+                                              <h4 className="font-semibold text-gray-900 dark:text-white text-sm">Novelty Score</h4>
+                                              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{getScoreExplanation('novelty')}</p>
+                                              <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">AI Assessment:</p>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{getScoreJustification(ideaItem, 'novelty')}</p>
+                                              </div>
+                                            </div>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </div>
                                     <p className="text-4xl font-bold text-foreground dark:text-foreground">
                                       {(ideaItem.novelty?.score || ideaItem.Novelty || 0).toFixed(1)}
                                     </p>
@@ -1343,14 +1567,52 @@ export default function IdeaDetailPage() {
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                                     {ideaItem.scientific_merit !== undefined && (
                                       <div className="bg-white dark:bg-gray-800/80 border border-gray-200 dark:border-gray-600 p-5 rounded-xl shadow-sm">
-                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Scientific Merit</p>
-                                        <p className="text-2xl font-bold text-gray-700 dark:text-gray-200">{(ideaItem.scientific_merit * 100).toFixed(0)}%</p>
+                                        <div className="flex items-center justify-center gap-2 mb-1">
+                                          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Scientific Merit</p>
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                                              </TooltipTrigger>
+                                              <TooltipContent className="max-w-sm p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-lg">
+                                                <div className="space-y-2">
+                                                  <h4 className="font-semibold text-gray-900 dark:text-white text-sm">Scientific Merit</h4>
+                                                  <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">Scientific rigor and contribution to knowledge</p>
+                                                  <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Assessment:</p>
+                                                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Evaluation of research quality and significance</p>
+                                                  </div>
+                                                </div>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        </div>
+                                        <p className="text-2xl font-bold text-gray-700 dark:text-gray-200 text-center">{(ideaItem.scientific_merit * 100).toFixed(0)}%</p>
                                       </div>
                                     )}
                                     {ideaItem.innovation_level !== undefined && (
                                       <div className="bg-white dark:bg-gray-800/80 border border-gray-200 dark:border-gray-600 p-5 rounded-xl shadow-sm">
-                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Innovation Level</p>
-                                        <p className="text-2xl font-bold text-gray-700 dark:text-gray-200">{(ideaItem.innovation_level * 100).toFixed(0)}%</p>
+                                        <div className="flex items-center justify-center gap-2 mb-1">
+                                          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Innovation Level</p>
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                                              </TooltipTrigger>
+                                              <TooltipContent className="max-w-sm p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-lg">
+                                                <div className="space-y-2">
+                                                  <h4 className="font-semibold text-gray-900 dark:text-white text-sm">Innovation Level</h4>
+                                                  <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">Level of technological and methodological innovation</p>
+                                                  <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Assessment:</p>
+                                                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Measurement of creative and novel approach</p>
+                                                  </div>
+                                                </div>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        </div>
+                                        <p className="text-2xl font-bold text-gray-700 dark:text-gray-200 text-center">{(ideaItem.innovation_level * 100).toFixed(0)}%</p>
                                       </div>
                                     )}
                                   </div>

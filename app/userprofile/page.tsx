@@ -9,6 +9,7 @@ import UserProfile from "@/components/user-profile"
 import type { UserData } from "@/types/user"
 import { useAuth } from "@/context/AuthContext"
 import { getUserIdeas } from "@/services/idea-service"
+import { formatUserDisplayName, getUserInitials } from "@/lib/utils"
 
 export default function UserProfilePage() {
   const router = useRouter()
@@ -117,7 +118,7 @@ export default function UserProfilePage() {
             personalInformation: [
               {
                 id: user.id || '1',
-                name: user.full_name || user.username || user.email || 'Researcher',
+                name: formatUserDisplayName(user),
                 email: user.email,
                 role: "Researcher",
                 institution: user.institution || "Research Institution",
@@ -165,8 +166,8 @@ export default function UserProfilePage() {
   };
 
   // Get user information
-  const userName = user?.full_name || user?.username || user?.email || "Guest"
-  const userInitial = userName.charAt(0)
+  const userName = formatUserDisplayName(user)
+  const userInitial = getUserInitials(user)
 
   // Only render this page if we're actually on the userprofile route
   if (pathname !== "/userprofile") {
@@ -204,7 +205,7 @@ export default function UserProfilePage() {
               <p className="text-lg text-gray-600">Loading user profile...</p>
             </div>
           ) : (
-            <UserProfile userData={userData} />
+            <UserProfile userData={userData} user={user} />
           )}
         </main>
 

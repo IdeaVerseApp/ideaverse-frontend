@@ -9,6 +9,7 @@ import ResearchPaperWriting from "@/components/research-paper-writing"
 import type { UserData } from "@/types/user"
 import { useAuth } from "@/context/AuthContext"
 import ComingSoon from "@/components/coming-soon"
+import { formatUserDisplayName, getUserInitials } from "@/lib/utils"
 
 export default function PaperPage() {
   const pathname = usePathname()
@@ -28,7 +29,7 @@ export default function PaperPage() {
             personalInformation: [
               {
                 id: 1,
-                name: user.full_name || user.username || user.email,
+                name: formatUserDisplayName(user),
                 email: user.email,
                 role: "Researcher",
                 institution: "Research Institution",
@@ -53,7 +54,7 @@ export default function PaperPage() {
 
   // Get user information - only if authenticated
   const userName = isAuthenticated && userData?.personalInformation[0]?.name || null
-  const userInitial = userName ? userName.charAt(0) : null
+  const userInitial = isAuthenticated ? getUserInitials(user) : null
 
   // Only render this page if we're actually on the paper route
   if (pathname !== "/paper") {

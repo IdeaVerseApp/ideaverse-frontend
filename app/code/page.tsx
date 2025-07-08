@@ -9,6 +9,7 @@ import CodeGeneration from "@/components/code-generation"
 import type { UserData } from "@/types/user"
 import { useAuth } from "@/context/AuthContext"
 import ComingSoon from "@/components/coming-soon"
+import { formatUserDisplayName, getUserInitials } from "@/lib/utils"
 
 export default function CodePage() {
   const searchParams = useSearchParams()
@@ -31,7 +32,7 @@ export default function CodePage() {
             personalInformation: [
               {
                 id: 1,
-                name: user.full_name || user.username || user.email,
+                name: formatUserDisplayName(user),
                 email: user.email,
                 role: "Researcher",
                 institution: "Research Institution",
@@ -56,7 +57,7 @@ export default function CodePage() {
 
   // Get user information
   const userName = userData?.personalInformation[0]?.name || "Guest"
-  const userInitial = userName.charAt(0)
+  const userInitial = getUserInitials(user)
 
   // Only render this page if we're actually on the code route
   if (pathname !== "/code") {

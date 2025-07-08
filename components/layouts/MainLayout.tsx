@@ -6,6 +6,7 @@ import Navbar from "@/components/navbar"
 import { useAuth } from "@/context/AuthContext"
 import Image from "next/image"
 import Link from "next/link"
+import { formatUserDisplayName, getUserInitials } from "@/lib/utils"
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -18,20 +19,8 @@ export default function MainLayout({ children, activeView = "dashboard", initial
   const { user, isAuthenticated } = useAuth()
 
   // Set default user data if not available from auth context or if not authenticated
-  const userName = isAuthenticated 
-    ? (user?.full_name || user?.username || "User")
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ')
-        .replace(/\d+$/, '') // Remove any trailing numbers (like timestamps)
-    : null
-  
-  // Get the first initial from the name - prefer first name if full name exists
-  const userInitial = userName 
-    ? (userName.includes(' ') 
-        ? userName.split(' ')[0].charAt(0) 
-        : userName.charAt(0)).toUpperCase() 
-    : "U"
+  const userName = isAuthenticated ? formatUserDisplayName(user) : null
+  const userInitial = isAuthenticated ? getUserInitials(user) : "U"
   
   // Remove the large logo banner entirely
   const showLargeLogo = false

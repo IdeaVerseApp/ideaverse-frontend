@@ -72,3 +72,36 @@ export function getDurationBetween(start?: string, end?: string) {
   }
   return `${seconds}s`;
 }
+
+/**
+ * Formats a user's display name consistently across the application
+ * Prioritizes full_name, then username, with proper camel case formatting
+ */
+export function formatUserDisplayName(user: { full_name?: string; username?: string; email?: string } | null): string {
+  if (!user) return "User"
+  
+  // Priority: full_name > username > email (split at @)
+  const rawName = user.full_name || user.username || user.email?.split('@')[0] || "User"
+  
+  // Convert to proper camel case (first letter of each word capitalized)
+  return rawName
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+    .replace(/\d+$/, '') // Remove any trailing numbers (like timestamps)
+}
+
+/**
+ * Gets the user's initials for display in avatars
+ */
+export function getUserInitials(user: { full_name?: string; username?: string; email?: string } | null): string {
+  const displayName = formatUserDisplayName(user)
+  
+  // If name has spaces, use first letter of each word
+  if (displayName.includes(' ')) {
+    return displayName.split(' ').map(word => word.charAt(0)).join('').toUpperCase()
+  }
+  
+  // Otherwise use first letter
+  return displayName.charAt(0).toUpperCase()
+}

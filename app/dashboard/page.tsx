@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { generateIdeas, getUserIdeas } from '@/services/idea-service';
+import { generateIdeas, getUserIdeas, generateFollowUpQuestions, getIdea } from '@/services/idea-service';
 import { Sparkle, Loader2, ExternalLink, Bookmark, Lightbulb, AlertCircle, Brain, ChevronRight, Zap, LineChart, BarChart, Beaker, FlaskConical, FileText, Code, ChevronDown, TrendingUp, Database, Target, Globe, BookOpen } from 'lucide-react';
 import MainLayout from '@/components/layouts/MainLayout';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import FollowUpQuestions from '@/components/follow-up-questions';
 import {
   Tooltip,
   TooltipContent,
@@ -25,8 +26,6 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-// Import recharts components via our wrapper to avoid SSR issues
-import { ResponsiveContainer, PieChart, Pie, Cell, BarChart as RechartsBarChart, Bar, XAxis, YAxis } from 'recharts'
 
 const formatDistanceToNow = (date: Date): string => {
   if (!date) return '';
@@ -88,7 +87,7 @@ export default function DashboardPage() {
   const [prompt, setPrompt] = useState('');
   const [ideas, setIdeas] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [numIdeas, setNumIdeas] = useState(5);
+  const [numIdeas, setNumIdeas] = useState(2);
   const [errorMessage, setErrorMessage] = useState('');
   // Always set to false to ensure real data is used
   const [useMockData, setUseMockData] = useState(false);
@@ -96,6 +95,12 @@ export default function DashboardPage() {
   const [recentGenerations, setRecentGenerations] = useState(0);
   const [fetchedInitialIdeas, setFetchedInitialIdeas] = useState(false);
   const router = useRouter();
+  
+  // Follow-up questions state
+  const [showFollowUpQuestions, setShowFollowUpQuestions] = useState(false);
+  const [followUpQuestions, setFollowUpQuestions] = useState<any[]>([]);
+  const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
+  const [followUpQuestionsLoading, setFollowUpQuestionsLoading] = useState(false);
 
   // Helper function to get formatted full name in Title Case
   const getFormattedFullName = () => {
@@ -167,45 +172,74 @@ export default function DashboardPage() {
     
     setLoading(true);
     setErrorMessage('');
+    setFollowUpQuestionsLoading(true);
     
     try {
-      const response = await generateIdeas({
+      const response = await generateFollowUpQuestions({
         task_description: prompt,
         code: "",
-        num_ideas: numIdeas,
-        num_reflections: 2
+        num_ideas: numIdeas
       });
       
-      console.log("API Response:", response);
+      console.log("Follow-up API Response:", response);
       
-      if (response && response.ideas && Array.isArray(response.ideas)) {
-        const firstIdea = response.ideas.length > 0 ? response.ideas[0] : {};
-        const category = (Array.isArray(response.tags) && response.tags.length > 0 ? response.tags[0] : undefined) || 
-                         firstIdea.category || 
-                         'generated';
-        const score = firstIdea.score || (typeof firstIdea.novelty === 'object' ? firstIdea.novelty?.score : firstIdea.novelty);
+      if (response && response.task_id) {
+        setCurrentTaskId(response.task_id);
 
-        const newTask = {
-          title: response.task_description,
-          description: firstIdea.description || firstIdea.experiment || `Contains ${response.ideas.length} generated ideas.`,
-          score: score,
-          category: category,
-          taskId: response.task_id,
-          createdAt: new Date(),
-          numIdeasInTask: response.ideas.length,
+        const waitForQuestions = async () => {
+          let attempts = 0;
+          const maxAttempts = 10;
+          while (attempts < maxAttempts) {
+            try {
+              const updatedTask = await getIdea(response.task_id);
+              if (updatedTask.follow_up_questions && updatedTask.follow_up_questions.length > 0) {
+                setFollowUpQuestions(updatedTask.follow_up_questions);
+                setShowFollowUpQuestions(true);
+                setFollowUpQuestionsLoading(false);
+                setLoading(false);
+                return;
+              }
+            } catch (err) {
+              console.error("Polling attempt failed", err);
+            }
+            await new Promise(res => setTimeout(res, 2000));
+            attempts += 1;
+          }
+          setFollowUpQuestionsLoading(false);
+          setLoading(false);
+          // If no follow-up questions, redirect directly to the idea page
+          router.push(`/ideas/${response.task_id}`);
         };
 
-        setIdeas(prev => [newTask, ...prev]);
+        waitForQuestions();
       } else {
-        console.error("Unexpected API response format:", response);
-        setErrorMessage('Received an unexpected response from the server. Try using the test data option.');
-        setIdeas([]); // Reset ideas if format is wrong
+        setErrorMessage('Failed to start idea generation. Please try again.');
+        setFollowUpQuestionsLoading(false);
+        setLoading(false);
       }
     } catch (error) {
-      console.error('Failed to generate ideas:', error);
-      const errorMsg = error instanceof Error ? error.message : 'Failed to generate ideas';
-      setErrorMessage(`${errorMsg}. Try enabling the test data option below.`);
-    } finally {
+      console.error('Failed to generate follow-up questions:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to generate follow-up questions';
+      setErrorMessage(`${errorMsg}. Please try again.`);
+      setFollowUpQuestionsLoading(false);
+      setLoading(false);
+    }
+  };
+
+  const handleFollowUpQuestionsComplete = async () => {
+    if (!currentTaskId) {
+      setErrorMessage("Task ID is missing. Please try again.");
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      const taskResponse = await getIdea(currentTaskId);
+      router.push(`/ideas/${currentTaskId}`);
+    } catch (err) {
+      console.error("Error after follow-up questions:", err);
+      setErrorMessage("An error occurred while processing your answers. Please try again.");
       setLoading(false);
     }
   };
@@ -252,6 +286,42 @@ export default function DashboardPage() {
     "bg-gradient-to-t from-blue-400 to-indigo-400 dark:from-blue-500 dark:to-indigo-500",
     "bg-gradient-to-t from-indigo-400 to-purple-400 dark:from-indigo-500 dark:to-purple-500",
   ];
+
+  // If follow-up questions are available, show the follow-up questions UI
+  if (showFollowUpQuestions && followUpQuestions.length > 0) {
+    return (
+      <MainLayout activeView="dashboard">
+        <div className="max-w-4xl mx-auto pt-6 pb-12 px-4">
+          <button 
+            onClick={() => {
+              setShowFollowUpQuestions(false);
+              setFollowUpQuestions([]);
+              setCurrentTaskId(null);
+            }}
+            className="mb-6 flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+          >
+            <ChevronRight className="h-4 w-4 mr-1 rotate-180" />
+            Back to Dashboard
+          </button>
+          
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
+              Follow-up Questions
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">
+              Please answer these questions to help clarify your idea: "{prompt}"
+            </p>
+          </div>
+          
+          <FollowUpQuestions 
+            taskId={currentTaskId || ""}
+            questions={followUpQuestions}
+            onComplete={handleFollowUpQuestionsComplete}
+          />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout activeView="dashboard">
@@ -315,267 +385,7 @@ export default function DashboardPage() {
           </div>
         </div>
         
-        {/* Research Analytics Section - Collapsible */}
-        {ideas.length > 0 && (
-          <motion.div 
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="analytics" className="border-none">
-                <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center mr-4">
-                      <TrendingUp className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="text-left">
-                      <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Research Analytics Dashboard</h2>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Insights from your research data and paper analysis</p>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-6">
-                  {(() => {
-                    // Calculate analytics data from ideas and similar papers
-                    const allSimilarPapers = ideas.flatMap(idea => 
-                      idea.similar_papers || []
-                    );
-                    
-                    const totalPapersScanned = allSimilarPapers.length;
-                    const avgSimilarity = totalPapersScanned > 0 
-                      ? allSimilarPapers.reduce((acc, paper) => acc + (paper.semantic_similarity || 0), 0) / totalPapersScanned
-                      : 0;
-                    
-                    // Publication year distribution
-                    const yearDistribution = allSimilarPapers.reduce((acc, paper) => {
-                      const year = paper.year || 'Unknown';
-                      acc[year] = (acc[year] || 0) + 1;
-                      return acc;
-                    }, {} as Record<string, number>);
-                    
-                    const yearChartData = Object.entries(yearDistribution)
-                      .filter(([year]) => year !== 'Unknown' && parseInt(year) >= 2015)
-                      .sort(([a], [b]) => parseInt(a) - parseInt(b))
-                      .map(([year, count]) => ({ year, count }));
-                    
-                    // Source distribution
-                    const sourceDistribution = allSimilarPapers.reduce((acc, paper) => {
-                      const source = paper.source || 'Unknown';
-                      acc[source] = (acc[source] || 0) + 1;
-                      return acc;
-                    }, {} as Record<string, number>);
-                    
-                    const sourceChartData = Object.entries(sourceDistribution)
-                      .map(([source, count]) => ({ source, count: count as number }))
-                      .sort((a, b) => (b.count as number) - (a.count as number))
-                      .slice(0, 6);
-                    
-                                         // Source colors for pie chart - Enhanced vibrant colors
-                     const sourceColors = {
-                       'arXiv': '#e74c3c',        // Vibrant red
-                       'IEEE': '#1abc9c',         // Turquoise
-                       'Semantic Scholar': '#3498db', // Bright blue
-                       'Scopus': '#2ecc71',       // Emerald green
-                       'PubMed': '#f39c12',       // Orange
-                       'ACM': '#9b59b6',          // Purple
-                       'Google Scholar': '#e67e22', // Dark orange
-                       'DBLP': '#34495e',         // Dark blue-gray
-                       'ResearchGate': '#16a085', // Dark turquoise
-                       'Unknown': '#95a5a6'       // Gray
-                     };
-                    
-                    const totalCitations = allSimilarPapers.reduce((acc, paper) => acc + (paper.citations || 0), 0);
-                    
-                    return (
-                      <div className="space-y-8">
-                        {/* Key Metrics Row */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                                     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800/20">
-                             <div className="flex items-center mb-2">
-                               <Database className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-2" />
-                               <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Top Similar Papers</span>
-                             </div>
-                             <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{totalPapersScanned.toLocaleString()}</div>
-                             <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">Across all research ideas</div>
-                           </div>
-                          
-                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800/20">
-                            <div className="flex items-center mb-2">
-                              <Target className="h-5 w-5 text-green-600 dark:text-green-400 mr-2" />
-                              <span className="text-sm font-medium text-green-700 dark:text-green-300">Avg Similarity</span>
-                            </div>
-                            <div className="text-2xl font-bold text-green-900 dark:text-green-100">{(avgSimilarity * 100).toFixed(1)}%</div>
-                            <div className="text-xs text-green-600 dark:text-green-400 mt-1">Semantic relevance</div>
-                          </div>
-                          
-                          <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 rounded-lg border border-purple-100 dark:border-purple-800/20">
-                            <div className="flex items-center mb-2">
-                              <BookOpen className="h-5 w-5 text-purple-600 dark:text-purple-400 mr-2" />
-                              <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Total Citations</span>
-                            </div>
-                            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{totalCitations.toLocaleString()}</div>
-                            <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">Research impact</div>
-                          </div>
-                          
-                          <div className="bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 p-4 rounded-lg border border-orange-100 dark:border-orange-800/20">
-                            <div className="flex items-center mb-2">
-                              <Globe className="h-5 w-5 text-orange-600 dark:text-orange-400 mr-2" />
-                              <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Data Sources</span>
-                            </div>
-                            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{Object.keys(sourceDistribution).length}</div>
-                            <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">Research databases</div>
-                          </div>
-                        </div>
 
-                        {/* Charts Row */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          {/* Publication Year Trend */}
-                          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-6">
-                            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
-                              <LineChart className="h-5 w-5 mr-2 text-indigo-600 dark:text-indigo-400" />
-                              Publication Year Distribution
-                            </h3>
-                            {yearChartData.length > 0 ? (
-                              <ResponsiveContainer width="100%" height={200}>
-                                <RechartsBarChart data={yearChartData}>
-                                  <XAxis dataKey="year" tick={{ fontSize: 12 }} />
-                                  <YAxis tick={{ fontSize: 12 }} />
-                                  <ChartTooltip 
-                                    content={({ active, payload, label }) => {
-                                      if (active && payload && payload.length) {
-                                        return (
-                                          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-                                            <p className="font-medium">{`Year: ${label}`}</p>
-                                            <p className="text-blue-600 dark:text-blue-400">{`Papers: ${payload[0].value}`}</p>
-                                          </div>
-                                        );
-                                      }
-                                      return null;
-                                    }}
-                                  />
-                                  <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                                </RechartsBarChart>
-                              </ResponsiveContainer>
-                            ) : (
-                              <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">
-                                <div className="text-center">
-                                  <BarChart className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                  <p>No publication year data available</p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Source Distribution */}
-                          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-6">
-                            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
-                              <Globe className="h-5 w-5 mr-2 text-green-600 dark:text-green-400" />
-                              Research Sources
-                            </h3>
-                            {sourceChartData.length > 0 ? (
-                              <div className="flex items-center">
-                                <ResponsiveContainer width="60%" height={200}>
-                                  <PieChart>
-                                    <Pie
-                                      data={sourceChartData}
-                                      cx="50%"
-                                      cy="50%"
-                                      outerRadius={80}
-                                      dataKey="count"
-                                      label={false}
-                                    >
-                                      {sourceChartData.map((entry, index) => (
-                                        <Cell 
-                                          key={`cell-${index}`} 
-                                          fill={sourceColors[entry.source as keyof typeof sourceColors] || sourceColors.Unknown} 
-                                        />
-                                      ))}
-                                    </Pie>
-                                    <ChartTooltip 
-                                      content={({ active, payload }) => {
-                                        if (active && payload && payload.length) {
-                                          const data = payload[0].payload;
-                                          return (
-                                            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-                                              <p className="font-medium">{data.source}</p>
-                                              <p className="text-blue-600 dark:text-blue-400">{`${data.count} papers`}</p>
-                                              <p className="text-sm text-gray-500">{`${((data.count / totalPapersScanned) * 100).toFixed(1)}%`}</p>
-                                            </div>
-                                          );
-                                        }
-                                        return null;
-                                      }}
-                                    />
-                                  </PieChart>
-                                </ResponsiveContainer>
-                                <div className="w-40% pl-4 space-y-2">
-                                  {sourceChartData.map((item, index) => (
-                                    <div key={item.source} className="flex items-center text-sm">
-                                      <div 
-                                        className="w-3 h-3 rounded-full mr-2" 
-                                        style={{ 
-                                          backgroundColor: sourceColors[item.source as keyof typeof sourceColors] || sourceColors.Unknown 
-                                        }}
-                                      />
-                                      <span className="text-gray-700 dark:text-gray-300 flex-1">{item.source}</span>
-                                      <span className="text-gray-500 dark:text-gray-400 font-medium">{item.count}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">
-                                <div className="text-center">
-                                  <Globe className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                  <p>No source data available</p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Summary Stats */}
-                        {totalPapersScanned > 0 && (
-                          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-lg p-6 border border-indigo-100 dark:border-indigo-800/20">
-                            <div className="flex items-center mb-4">
-                              <TrendingUp className="h-6 w-6 text-indigo-600 dark:text-indigo-400 mr-3" />
-                              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Research Insights</h3>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                              <div>
-                                <p className="text-gray-600 dark:text-gray-400 mb-1">Most Active Source</p>
-                                <p className="font-semibold text-indigo-700 dark:text-indigo-300">
-                                  {sourceChartData.length > 0 ? sourceChartData[0].source : 'N/A'}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-gray-600 dark:text-gray-400 mb-1">Peak Publication Year</p>
-                                <p className="font-semibold text-indigo-700 dark:text-indigo-300">
-                                  {yearChartData.length > 0 
-                                    ? yearChartData.reduce((max, curr) => (curr.count as number) > (max.count as number) ? curr : max).year 
-                                    : 'N/A'
-                                  }
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-gray-600 dark:text-gray-400 mb-1">High-Impact Papers</p>
-                                <p className="font-semibold text-indigo-700 dark:text-indigo-300">
-                                  {allSimilarPapers.filter(p => (p.citations || 0) > 100).length} papers
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </motion.div>
-        )}
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Idea Generator Card */}
@@ -608,7 +418,7 @@ export default function DashboardPage() {
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder="Describe your research interest or problem you're trying to solve..."
-                  disabled={loading}
+                  disabled={loading || followUpQuestionsLoading}
                 />
               </motion.div>
               
@@ -630,7 +440,7 @@ export default function DashboardPage() {
                   value={numIdeas}
                   onChange={(e) => setNumIdeas(parseInt(e.target.value))}
                   className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-md appearance-none cursor-pointer accent-blue-600"
-                  disabled={loading}
+                  disabled={loading || followUpQuestionsLoading}
                 />
                 <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 px-1 mt-1">
                   <span>1</span>
@@ -644,19 +454,19 @@ export default function DashboardPage() {
               <motion.button
                 variants={itemVariants}
                 type="submit"
-                disabled={loading || !prompt.trim()}
+                disabled={loading || followUpQuestionsLoading || !prompt.trim()}
                 className={`w-full ${
-                  loading || !prompt.trim() 
+                  loading || followUpQuestionsLoading || !prompt.trim() 
                     ? 'bg-blue-300 dark:bg-blue-700/50 cursor-not-allowed' 
                     : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600'
                 } text-white py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center shadow-sm`}
-                whileHover={!loading && prompt.trim() ? { scale: 1.02 } : {}}
-                whileTap={!loading && prompt.trim() ? { scale: 0.98 } : {}}
+                whileHover={!loading && !followUpQuestionsLoading && prompt.trim() ? { scale: 1.02 } : {}}
+                whileTap={!loading && !followUpQuestionsLoading && prompt.trim() ? { scale: 0.98 } : {}}
               >
-                {loading ? (
+                {loading || followUpQuestionsLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating ideas...
+                    {followUpQuestionsLoading ? "Generating questions..." : "Generating ideas..."}
                   </>
                 ) : (
                   <>
@@ -665,6 +475,19 @@ export default function DashboardPage() {
                   </>
                 )}
               </motion.button>
+              
+              {/* Loading message for follow-up questions */}
+              {followUpQuestionsLoading && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6, repeat: Infinity, repeatType: "reverse" }}
+                  className="flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400 text-sm mt-2"
+                >
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Generating follow-up questions…</span>
+                </motion.div>
+              )}
               
               {/* Error message */}
               {errorMessage && (

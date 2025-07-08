@@ -8,6 +8,7 @@ import MainLayout from "@/components/layouts/MainLayout"
 import type { UserData } from "@/types/user"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
+import { formatUserDisplayName } from "@/lib/utils"
 
 export default function IdeasPage() {
   const pathname = usePathname()
@@ -28,7 +29,7 @@ export default function IdeasPage() {
             personalInformation: [
               {
                 id: 1,
-                name: user.full_name || user.username || user.email,
+                name: formatUserDisplayName(user),
                 email: user.email,
                 role: "Researcher",
                 institution: "Research Institution",

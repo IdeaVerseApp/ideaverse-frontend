@@ -1,11 +1,13 @@
 import { Calendar, FileText, Code, BookOpen, Star, Users, Clock, Sparkles, LineChart, Award, Flame, Zap, ArrowRight, Brain, Share2 } from "lucide-react"
 import type { UserData } from "@/types/user"
+import { getUserInitials } from "@/lib/utils"
 
 interface UserProfileProps {
   userData: UserData | null
+  user?: { full_name?: string; username?: string; email?: string } | null
 }
 
-export default function UserProfile({ userData }: UserProfileProps) {
+export default function UserProfile({ userData, user }: UserProfileProps) {
   // If no user data is provided, return a message
   if (!userData) {
     return (
@@ -20,7 +22,7 @@ export default function UserProfile({ userData }: UserProfileProps) {
   // Get user information or use defaults if not available
   const userInfo = userData?.personalInformation[0]
   const userName = userInfo?.name || "Researcher"
-  const userInitial = userName.charAt(0)
+  const userInitial = user ? getUserInitials(user) : userName.charAt(0)
   const joinDate = userInfo?.joinDate
     ? new Date(userInfo.joinDate).toLocaleDateString("en-US", { month: "long", year: "numeric" })
     : "Recently joined"
@@ -59,7 +61,7 @@ export default function UserProfile({ userData }: UserProfileProps) {
         <div className="absolute bottom-0 left-0 right-0 top-0 bg-[radial-gradient(circle_800px_at_50%_200px,#C9EBFF,transparent)] dark:bg-[radial-gradient(circle_800px_at_50%_200px,#0c2144,transparent)]"></div>
       </div>
 
-      <div className="max-w-7xl mx-auto pt-16 pb-24 px-4 relative z-10">
+      <div className="max-w-7xl mx-auto pt-24 pb-24 px-4 relative z-10">
         {/* Hero section */}
         <div className="mb-10 text-center">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-4">

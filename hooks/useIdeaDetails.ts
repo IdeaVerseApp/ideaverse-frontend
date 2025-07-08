@@ -13,6 +13,8 @@ export const useIdeaDetails = (ideaId: string, isAuthenticated: boolean, authLoa
   const router = useRouter();
 
   useEffect(() => {
+    let currentEventSource: EventSource | null = null;
+    
     const fetchIdeaDetails = async () => {
       if (!ideaId || authLoading) return;
       
@@ -30,23 +32,24 @@ export const useIdeaDetails = (ideaId: string, isAuthenticated: boolean, authLoa
         setLoading(false);
 
         if (ideaData.status === "PENDING" || ideaData.status === "PROCESSING") {
-          const sse = new EventSource(`${API_URL}/api/v1/ideatask/events/${ideaId}`);
+          currentEventSource = new EventSource(`${API_URL}/api/v1/ideatask/events/${ideaId}`);
           
-          sse.onmessage = (event) => {
+          currentEventSource.onmessage = (event) => {
             const data = JSON.parse(event.data);
             setIdea(data);
             
             if (data.status === "completed" || data.status === "failed") {
-              sse.close();
-              router.refresh();
+              currentEventSource?.close();
+              setEventSource(null);
             }
           };
           
-          sse.onerror = () => {
-            sse.close();
+          currentEventSource.onerror = () => {
+            currentEventSource?.close();
+            setEventSource(null);
           };
           
-          setEventSource(sse);
+          setEventSource(currentEventSource);
         }
       } catch (err) {
         console.error("Error fetching idea details:", err);
@@ -66,11 +69,16 @@ export const useIdeaDetails = (ideaId: string, isAuthenticated: boolean, authLoa
     fetchIdeaDetails();
 
     return () => {
+      if (currentEventSource) {
+        currentEventSource.close();
+        currentEventSource = null;
+      }
       if (eventSource) {
         eventSource.close();
+        setEventSource(null);
       }
     };
-  }, [ideaId, isAuthenticated, authLoading, router, eventSource]);
+  }, [ideaId, isAuthenticated, authLoading, router]);
 
   return { idea, loading, error, setIdea };
 }; 

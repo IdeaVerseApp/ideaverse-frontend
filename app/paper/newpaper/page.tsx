@@ -24,6 +24,7 @@ import Sidebar from "@/components/sidebar"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import { useAuth } from "@/context/AuthContext"
+import { formatUserDisplayName, getUserInitials } from "@/lib/utils"
 
 // Define paper section types
 type PaperSection = {
@@ -42,8 +43,8 @@ export default function NewPaperPage() {
   const [activePaperSection, setActivePaperSection] = useState<string>("abstract")
   const { isAuthenticated, user } = useAuth()
   const [userData, setUserData] = useState({
-    name: isAuthenticated && user ? (user.full_name || user.username || user.email) : "Guest User",
-    initial: isAuthenticated && user ? (user.full_name || user.username || user.email).charAt(0) : "G",
+    name: isAuthenticated && user ? formatUserDisplayName(user) : "Guest User",
+    initial: isAuthenticated && user ? getUserInitials(user) : "G",
   })
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [paperTitle, setPaperTitle] = useState("")
@@ -57,6 +58,14 @@ export default function NewPaperPage() {
   const [showSectionMenu, setShowSectionMenu] = useState(false)
   const [saveStatus, setSaveStatus] = useState("")
   const editorRef = useRef<HTMLTextAreaElement>(null)
+
+  // Update user data when authentication state changes
+  useEffect(() => {
+    setUserData({
+      name: isAuthenticated && user ? formatUserDisplayName(user) : "Guest User",
+      initial: isAuthenticated && user ? getUserInitials(user) : "G",
+    })
+  }, [isAuthenticated, user])
 
   // Load research topic and selected section from localStorage
   useEffect(() => {

@@ -1,7 +1,5 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-// @ts-ignore – library ships without bundled types
-import html2pdf from 'html2pdf.js';
 import type { IdeaDetail } from '@/types/idea';
 
 export const downloadIdeaAsPdf = (idea: IdeaDetail, experiment: string) => {
@@ -30,16 +28,26 @@ export const downloadIdeaAsPdf = (idea: IdeaDetail, experiment: string) => {
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
     } as const;
 
-    const worker = html2pdf().set(options).from(pdfElement);
-    
-    worker.save().then(() => {
-      if (isDarkMode) {
-        document.documentElement.classList.add('dark');
-      }
-      document.head.removeChild(tempStyle);
+    // Dynamically import html2pdf only when needed to avoid SSR issues
+    import('html2pdf.js').then((html2pdf) => {
+      const worker = html2pdf.default().set(options).from(pdfElement);
+      
+      worker.save().then(() => {
+        if (isDarkMode) {
+          document.documentElement.classList.add('dark');
+        }
+        document.head.removeChild(tempStyle);
+      }).catch((err: any) => {
+        console.error("Error generating PDF:", err);
+        // Cleanup even if there's an error
+        if (isDarkMode) {
+          document.documentElement.classList.add('dark');
+        }
+        document.head.removeChild(tempStyle);
+      });
     }).catch((err: any) => {
-      console.error("Error generating PDF:", err);
-      // Cleanup even if there's an error
+      console.error("Error loading html2pdf:", err);
+      // Cleanup on import error
       if (isDarkMode) {
         document.documentElement.classList.add('dark');
       }

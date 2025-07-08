@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { getUserIdeas } from "@/services/idea-service"
 import { Loader2, RefreshCw, Filter, SortAsc, SortDesc, Clock, Check, X, AlertCircle, ArrowLeft, Plus } from "lucide-react"
@@ -33,40 +33,130 @@ export default function GeneratedIdeas() {
   const [sortOrder, setSortOrder] = useState(-1)
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [selectedIdeaForFollowup, setSelectedIdeaForFollowup] = useState<IdeaTask | null>(null)
+  const [refreshCounter, setRefreshCounter] = useState(0)
   const router = useRouter()
 
-  const fetchIdeas = async () => {
-    setLoading(true)
-    setError(null) // Clear previous errors
-    
-    try {
-      const data = await getUserIdeas({
-        sort_by: sortBy,
-        sort_order: sortOrder,
-        status: statusFilter || undefined,
-        limit: 50
-      })
-      
-      // Check if we got a valid response (even if empty)
-      if (Array.isArray(data)) {
-        setIdeas(data)
-      } else {
-        // Handle unexpected response format
-        console.warn("Unexpected response format from getUserIdeas:", data)
-        setError("Received invalid data format from server")
-      }
-    } catch (err: any) {
-      // Show specific error message if available
-      setError(err?.message || "Failed to load ideas. Please try again.")
-      console.error("Error fetching ideas:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Polling state
+  const [isPolling, setIsPolling] = useState(false)
+  const [pollInterval, setPollInterval] = useState(15000) // Start with 15 seconds
+  const pollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const pollAttemptsRef = useRef(0)
+  const maxPollAttempts = 30 // Maximum 10 minutes of polling (30 * 20 seconds average)
 
+  const stopPolling = useCallback(() => {
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current)
+      pollTimeoutRef.current = null
+    }
+    setIsPolling(false)
+    pollAttemptsRef.current = 0
+  }, [])
+
+  // Initial fetch and when filters change
   useEffect(() => {
-    fetchIdeas()
-  }, [sortBy, sortOrder, statusFilter])
+    const loadIdeas = async () => {
+      // Stop any existing polling before fetching new data
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current)
+        pollTimeoutRef.current = null
+      }
+      setIsPolling(false)
+      pollAttemptsRef.current = 0
+      
+      setLoading(true)
+      setError(null)
+      
+      try {
+        const data = await getUserIdeas({
+          sort_by: sortBy,
+          sort_order: sortOrder,
+          status: statusFilter || undefined,
+          limit: 50
+        })
+        
+        if (Array.isArray(data)) {
+          setIdeas(data)
+          
+          // Check if we should start polling
+          const hasProcessingIdeas = data.some(idea => 
+            idea.status.toLowerCase() === 'processing' || 
+            idea.status.toLowerCase() === 'pending'
+          )
+          
+          if (hasProcessingIdeas) {
+            setIsPolling(true)
+            pollAttemptsRef.current = 0
+            setPollInterval(15000)
+            
+            const poll = async () => {
+              pollAttemptsRef.current += 1
+              
+              try {
+                const pollData = await getUserIdeas({
+                  sort_by: sortBy,
+                  sort_order: sortOrder,
+                  status: statusFilter || undefined,
+                  limit: 50
+                })
+                
+                if (Array.isArray(pollData)) {
+                  setIdeas(pollData)
+                  
+                  const stillProcessing = pollData.some(idea => 
+                    idea.status.toLowerCase() === 'processing' || 
+                    idea.status.toLowerCase() === 'pending'
+                  )
+                  
+                  if (stillProcessing && pollAttemptsRef.current < maxPollAttempts) {
+                    const nextInterval = Math.min(
+                      15000 + (pollAttemptsRef.current * 3000), // Start at 15s, increase by 3s each attempt
+                      60000 // Cap at 60 seconds
+                    )
+                    setPollInterval(nextInterval)
+                    pollTimeoutRef.current = setTimeout(poll, nextInterval)
+                  } else {
+                    setIsPolling(false)
+                    pollAttemptsRef.current = 0
+                  }
+                } else {
+                  setIsPolling(false)
+                  pollAttemptsRef.current = 0
+                }
+              } catch (error) {
+                console.error("Error during polling:", error)
+                if (pollAttemptsRef.current < maxPollAttempts) {
+                  const nextInterval = Math.min(30000, 60000) // Use longer interval on error
+                  pollTimeoutRef.current = setTimeout(poll, nextInterval)
+                } else {
+                  setIsPolling(false)
+                  pollAttemptsRef.current = 0
+                }
+              }
+            }
+            
+            pollTimeoutRef.current = setTimeout(poll, 15000)
+          }
+        } else {
+          console.warn("Unexpected response format from getUserIdeas:", data)
+          setError("Received invalid data format from server")
+        }
+      } catch (err: any) {
+        setError(err?.message || "Failed to load ideas. Please try again.")
+        console.error("Error fetching ideas:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    loadIdeas()
+  }, [sortBy, sortOrder, statusFilter, refreshCounter]) // Include refreshCounter to trigger manual refreshes
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      stopPolling()
+    }
+  }, [stopPolling])
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -107,8 +197,13 @@ export default function GeneratedIdeas() {
 
   const handleFollowupComplete = () => {
     setSelectedIdeaForFollowup(null)
-    // Refresh ideas to get updated statuses
-    fetchIdeas()
+    // Refresh ideas to get updated statuses - trigger useEffect by updating refresh counter
+    setRefreshCounter(prev => prev + 1)
+  }
+
+  const handleManualRefresh = () => {
+    // Force refresh - trigger useEffect by updating refresh counter
+    setRefreshCounter(prev => prev + 1)
   }
 
   const toggleSort = (field: string) => {
@@ -155,11 +250,11 @@ export default function GeneratedIdeas() {
             <span>New Idea</span>
           </button>
           <button 
-            onClick={fetchIdeas}
-            className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+            onClick={handleManualRefresh}
+            className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400"
             title="Refresh"
           >
-            <RefreshCw className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <RefreshCw className="h-5 w-5" />
           </button>
           <div className="relative">
             <button 
@@ -188,7 +283,7 @@ export default function GeneratedIdeas() {
           <div>
             <p className="font-medium">{error}</p>
             <button 
-              onClick={fetchIdeas} 
+              onClick={handleManualRefresh} 
               className="mt-2 text-sm bg-red-100 dark:bg-red-800 px-3 py-1 rounded-md hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
             >
               Try Again

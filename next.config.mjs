@@ -34,8 +34,6 @@ const nextConfig = {
   },
   // Add output configuration for Docker deployment
   output: 'standalone',
-  // Prevent server-side rendering of browser-only libraries
-  serverComponentsExternalPackages: ['recharts'],
 }
 
 if (userConfig) {
