@@ -14,7 +14,8 @@ const handler = NextAuth({
         params: {
           prompt: "consent",
           access_type: "offline",
-          response_type: "code"
+          response_type: "code",
+          scope: "openid email profile"
         }
       }
     }),
@@ -74,11 +75,18 @@ const handler = NextAuth({
       if (account && user) {
         if (account.provider === "google") {
           try {
+            console.log("Attempting Google auth with backend...");
             // Send Google token to backend for verification and account creation/login
             const response = await axios.post(`${API_URL}/api/v1/auth/google`, {
               token: account.id_token,
+            }, {
+              timeout: 10000, // 10 second timeout
+              headers: {
+                'Content-Type': 'application/json'
+              }
             });
             
+            console.log("Google auth successful:", response.status);
             const { access_token, user: backendUser } = response.data;
             
             return {
@@ -91,13 +99,14 @@ const handler = NextAuth({
             };
           } catch (error) {
             console.error("Google login error:", error);
-            return { ...token, error: "GoogleSignInFailed" };
+            // Instead of returning error, throw to prevent sign-in
+            throw new Error("GoogleSignInFailed");
           }
-        } else if (user.accessToken) {
+        } else if ((user as any).accessToken) {
           // If using credentials provider
           return {
             ...token,
-            accessToken: user.accessToken,
+            accessToken: (user as any).accessToken,
             id: user.id,
             email: user.email,
             name: user.name,
@@ -115,8 +124,8 @@ const handler = NextAuth({
           email: token.email,
           image: (token as any).picture,
         };
-        session.accessToken = token.accessToken;
-        session.error = token.error;
+        (session as any).accessToken = token.accessToken;
+        // Remove error propagation to session
       }
       return session;
     },
@@ -128,44 +137,6 @@ const handler = NextAuth({
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: false // Set to false for HTTP, true for HTTPS
-      }
-    },
-    callbackUrl: {
-      name: `next-auth.callback-url`,
-      options: {
-        sameSite: 'lax',
-        path: '/',
-        secure: false
-      }
-    },
-    csrfToken: {
-      name: `next-auth.csrf-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: false
-      }
-    },
-    state: {
-      name: `next-auth.state`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: false,
-        maxAge: 15 * 60 // 15 minutes
-      }
-    }
   },
   secret: process.env.NEXTAUTH_SECRET,
   debug: true, // Enable debug mode for better error logging
